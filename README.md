@@ -92,6 +92,8 @@ Fill in `.env.local`:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → `service_role` secret key |
 | `ANTHROPIC_MODEL` | Optional, defaults to `claude-sonnet-4-6` |
+| `SITE_PIN` | Any digit string you choose — required to access the app |
+| `SESSION_SECRET` | Random string signing the session cookie. Generate with `openssl rand -hex 32` |
 
 **`SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security** — it's what lets
 the server read all of `location_pings` regardless of RLS policies. It must
@@ -148,14 +150,54 @@ picked up from `.env.local` automatically since that file is gitignored.
 After deploying, hit `https://<your-app>.vercel.app/api/health` to confirm
 the deployed environment can reach Supabase before testing real queries.
 
+## Access control (PIN gate)
+
+Since this app exposes real location history over a public URL, every route —
+pages *and* API endpoints — is gated behind a 6-digit PIN, enforced in
+`middleware.ts`:
+
+- `/login` — PIN entry screen, the only page reachable without a session
+- `/api/auth/login` — the only API route reachable without a session;
+  verifies the PIN against `SITE_PIN` and issues a signed, `httpOnly` session
+  cookie valid for 30 days
+- Everything else — any other page, and critically `/api/query` itself —
+  returns a redirect (pages) or a 401 (API calls) without a valid cookie
+
+This matters because a PIN check done only in the browser wouldn't actually
+protect anything — someone could call `/api/query` directly and bypass a
+UI-only gate entirely. The middleware runs server-side on every request
+before your code does, so there's no path around it.
+
+The session token is a signed `expiry.hmac` pair (`lib/auth.ts`), verified
+with the Web Crypto API rather than Node's `crypto` module, because
+Next.js middleware runs on Vercel's Edge runtime, which doesn't have
+Node's `crypto` available.
+
+## Timeline scrubber
+
+Below the map, a play/scrub control lets you replay a queried day: drag the
+slider (or hit play) and a marker animates along your actual route,
+interpolated between real GPS points (`lib/interpolate.ts`) rather than
+jumping point to point. Green ticks on the scrubber track mark where stops
+occurred.
+
+This is entirely client-side — it replays the `route` and `stops` arrays
+already returned by the single `/api/query` call for that question. No
+additional Supabase or Claude calls happen while scrubbing; it's just
+animating over data already sitting in React state. Scrubbing into a date
+range outside what was originally queried isn't supported — that would need
+a fresh query.
+
 ## Known limitations / next steps
 
 - **Reverse geocoding is sequential and rate-limited to 1 req/sec** — fine
   for a handful of stops, slow for a query spanning many stops. Swap in a
   paid geocoder (Mapbox, Google) if you need speed at scale.
 - **No auth on the app itself** — anyone with the URL can query your
-  location history. Fine for personal use behind a private Vercel URL;
-  add Vercel's password protection or a real auth layer before sharing it.
+  location history. **Update: this is now handled** — see "Access control"
+  above. The PIN is a single shared secret (fine for personal use by one
+  person); it's not per-user accounts, rate-limited, or lockout-protected
+  against repeated guesses, so treat it like a door key, not a bank login.
 - **Stop-clustering thresholds are fixed** (120m radius, 8min minimum) in
   `lib/simplify.ts` — tune `STOP_RADIUS_METERS` / `MIN_STOP_MINUTES` if
   your commute pattern needs different sensitivity.

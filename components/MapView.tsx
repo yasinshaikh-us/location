@@ -1,28 +1,105 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
   Polyline,
-  CircleMarker,
+  Marker,
   Popup,
   useMap,
 } from "react-leaflet";
+import L from "leaflet";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MapPin, Navigation2 } from "lucide-react";
 import type { GeoJSONFeatureCollection } from "@/lib/types";
 
 interface MapViewProps {
   geojson: GeoJSONFeatureCollection;
   selectedStopIndex: number | null;
   onSelectStop: (index: number | null) => void;
+  /** Interpolated playhead position from the timeline scrubber, if active */
+  playhead?: { lat: number; lon: number; isMoving: boolean } | null;
 }
 
 const DEFAULT_CENTER: [number, number] = [47.6205, -122.1795]; // Kirkland, WA fallback
 
+function buildDivIcon(html: string, size: number) {
+  return L.divIcon({
+    html,
+    className: "location-timeline-icon",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+function stopIcon(isSelected: boolean) {
+  const size = isSelected ? 40 : 32;
+  const color = isSelected ? "#dc2626" : "#059669";
+  const html = renderToStaticMarkup(
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "9999px",
+        background: color,
+        boxShadow: isSelected
+          ? "0 0 0 6px rgba(220,38,38,0.22), 0 2px 8px rgba(0,0,0,0.35)"
+          : "0 2px 6px rgba(0,0,0,0.3)",
+        border: "2px solid white",
+        transition: "all 150ms ease",
+      }}
+    >
+      <MapPin color="white" size={isSelected ? 20 : 16} strokeWidth={2.5} />
+    </div>
+  );
+  return buildDivIcon(html, size);
+}
+
+function playheadIcon(isMoving: boolean) {
+  const size = 30;
+  const html = renderToStaticMarkup(
+    <div style={{ position: "relative", width: size, height: size }}>
+      {isMoving && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "9999px",
+            background: "rgba(37,99,235,0.35)",
+            animation: "lt-pulse 1.4s ease-out infinite",
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: "absolute",
+          inset: 4,
+          borderRadius: "9999px",
+          background: "#2563eb",
+          border: "3px solid white",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Navigation2 color="white" size={12} strokeWidth={3} />
+      </div>
+    </div>
+  );
+  return buildDivIcon(html, size);
+}
+
 function FitToData({ geojson }: { geojson: GeoJSONFeatureCollection }) {
   const map = useMap();
+  const hasFit = useRef(false);
 
   useEffect(() => {
+    if (hasFit.current) return;
     const allCoords: [number, number][] = [];
     for (const feature of geojson.features) {
       if (feature.geometry.type === "LineString") {
@@ -35,7 +112,8 @@ function FitToData({ geojson }: { geojson: GeoJSONFeatureCollection }) {
       }
     }
     if (allCoords.length > 0) {
-      map.fitBounds(allCoords, { padding: [40, 40], maxZoom: 16 });
+      map.fitBounds(allCoords, { padding: [32, 32], maxZoom: 16 });
+      hasFit.current = true;
     }
   }, [geojson, map]);
 
@@ -46,6 +124,7 @@ export default function MapView({
   geojson,
   selectedStopIndex,
   onSelectStop,
+  playhead,
 }: MapViewProps) {
   const routeCoords = useMemo(() => {
     const line = geojson.features.find(
@@ -63,67 +142,77 @@ export default function MapView({
   );
 
   return (
-    <MapContainer
-      center={DEFAULT_CENTER}
-      zoom={13}
-      scrollWheelZoom
-      className="h-full w-full rounded-lg"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <FitToData geojson={geojson} />
-
-      {routeCoords.length > 1 && (
-        <Polyline
-          positions={routeCoords}
-          pathOptions={{ color: "#2563eb", weight: 3, opacity: 0.7 }}
+    <>
+      <style>{`
+        @keyframes lt-pulse {
+          0% { transform: scale(0.6); opacity: 0.9; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        .location-timeline-icon { background: transparent; border: none; }
+        .leaflet-container { font-family: inherit; }
+      `}</style>
+      <MapContainer
+        center={DEFAULT_CENTER}
+        zoom={13}
+        scrollWheelZoom
+        className="h-full w-full rounded-2xl"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-      )}
+        <FitToData geojson={geojson} />
 
-      {stopFeatures.map((feature, i) => {
-        if (feature.geometry.type !== "Point") return null;
-        const [lon, lat] = feature.geometry.coordinates;
-        const props = feature.properties as {
-          index: number;
-          place: string;
-          arrival: string;
-          departure: string;
-          durationMinutes: number;
-        };
-        const isSelected = selectedStopIndex === props.index;
+        {routeCoords.length > 1 && (
+          <Polyline
+            positions={routeCoords}
+            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.55 }}
+          />
+        )}
 
-        return (
-          <CircleMarker
-            key={i}
-            center={[lat, lon]}
-            radius={isSelected ? 11 : 7}
-            pathOptions={{
-              color: isSelected ? "#dc2626" : "#059669",
-              fillColor: isSelected ? "#dc2626" : "#059669",
-              fillOpacity: 0.85,
-              weight: 2,
-            }}
-            eventHandlers={{
-              click: () => onSelectStop(props.index),
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-semibold">{props.place}</div>
-                <div>
-                  {new Date(props.arrival).toLocaleString()} –{" "}
-                  {new Date(props.departure).toLocaleString()}
+        {stopFeatures.map((feature, i) => {
+          if (feature.geometry.type !== "Point") return null;
+          const [lon, lat] = feature.geometry.coordinates;
+          const props = feature.properties as {
+            index: number;
+            place: string;
+            arrival: string;
+            departure: string;
+            durationMinutes: number;
+          };
+          const isSelected = selectedStopIndex === props.index;
+
+          return (
+            <Marker
+              key={i}
+              position={[lat, lon]}
+              icon={stopIcon(isSelected)}
+              eventHandlers={{ click: () => onSelectStop(props.index) }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-semibold">{props.place}</div>
+                  <div>
+                    {new Date(props.arrival).toLocaleString()} –{" "}
+                    {new Date(props.departure).toLocaleString()}
+                  </div>
+                  <div className="text-gray-500">
+                    {props.durationMinutes} min
+                  </div>
                 </div>
-                <div className="text-gray-500">
-                  {props.durationMinutes} min
-                </div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        );
-      })}
-    </MapContainer>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {playhead && (
+          <Marker
+            position={[playhead.lat, playhead.lon]}
+            icon={playheadIcon(playhead.isMoving)}
+            zIndexOffset={1000}
+          />
+        )}
+      </MapContainer>
+    </>
   );
 }
