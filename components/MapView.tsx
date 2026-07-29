@@ -11,8 +11,8 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MapPin, Navigation2 } from "lucide-react";
 import type { GeoJSONFeatureCollection } from "@/lib/types";
+import { formatDateTime, formatDuration } from "@/lib/format";
 
 interface MapViewProps {
   geojson: GeoJSONFeatureCollection;
@@ -33,9 +33,13 @@ function buildDivIcon(html: string, size: number) {
   });
 }
 
-function stopIcon(isSelected: boolean) {
-  const size = isSelected ? 40 : 32;
-  const color = isSelected ? "#dc2626" : "#059669";
+/**
+ * Renders a stop marker as a colored badge with a short text label:
+ * "S" for the first stop of the range, "E" for the last, and a plain
+ * number (1, 2, 3…) for everything in between.
+ */
+function stopIcon(label: string, color: string, isSelected: boolean) {
+  const size = isSelected ? 38 : 30;
   const html = renderToStaticMarkup(
     <div
       style={{
@@ -47,20 +51,30 @@ function stopIcon(isSelected: boolean) {
         borderRadius: "9999px",
         background: color,
         boxShadow: isSelected
-          ? "0 0 0 6px rgba(220,38,38,0.22), 0 2px 8px rgba(0,0,0,0.35)"
+          ? "0 0 0 6px rgba(37,99,235,0.22), 0 2px 8px rgba(0,0,0,0.35)"
           : "0 2px 6px rgba(0,0,0,0.3)",
         border: "2px solid white",
+        color: "white",
+        fontFamily: "inherit",
+        fontWeight: 700,
+        fontSize: isSelected ? 14 : 12,
+        lineHeight: 1,
         transition: "all 150ms ease",
       }}
     >
-      <MapPin color="white" size={isSelected ? 20 : 16} strokeWidth={2.5} />
+      {label}
     </div>
   );
   return buildDivIcon(html, size);
 }
 
+const START_COLOR = "#059669"; // green
+const END_COLOR = "#dc2626"; // red
+const STOP_COLOR = "#1d4ed8"; // blue
+
+/** Plain orange dot marking the current replay position; pulses while moving. */
 function playheadIcon(isMoving: boolean) {
-  const size = 30;
+  const size = 22;
   const html = renderToStaticMarkup(
     <div style={{ position: "relative", width: size, height: size }}>
       {isMoving && (
@@ -69,7 +83,7 @@ function playheadIcon(isMoving: boolean) {
             position: "absolute",
             inset: 0,
             borderRadius: "9999px",
-            background: "rgba(37,99,235,0.35)",
+            background: "rgba(249,115,22,0.35)",
             animation: "lt-pulse 1.4s ease-out infinite",
           }}
         />
@@ -77,18 +91,13 @@ function playheadIcon(isMoving: boolean) {
       <div
         style={{
           position: "absolute",
-          inset: 4,
+          inset: 3,
           borderRadius: "9999px",
-          background: "#2563eb",
-          border: "3px solid white",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          background: "#f97316",
+          border: "2px solid white",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
         }}
-      >
-        <Navigation2 color="white" size={12} strokeWidth={3} />
-      </div>
+      />
     </div>
   );
   return buildDivIcon(html, size);
@@ -181,23 +190,27 @@ export default function MapView({
             durationMinutes: number;
           };
           const isSelected = selectedStopIndex === props.index;
+          const isFirst = i === 0;
+          const isLast = i === stopFeatures.length - 1 && stopFeatures.length > 1;
+          const label = isFirst ? "S" : isLast ? "E" : String(i);
+          const color = isFirst ? START_COLOR : isLast ? END_COLOR : STOP_COLOR;
 
           return (
             <Marker
               key={i}
               position={[lat, lon]}
-              icon={stopIcon(isSelected)}
+              icon={stopIcon(label, color, isSelected)}
               eventHandlers={{ click: () => onSelectStop(props.index) }}
             >
               <Popup>
                 <div className="text-sm">
                   <div className="font-semibold">{props.place}</div>
                   <div>
-                    {new Date(props.arrival).toLocaleString()} –{" "}
-                    {new Date(props.departure).toLocaleString()}
+                    {formatDateTime(props.arrival)} –{" "}
+                    {formatDateTime(props.departure)}
                   </div>
                   <div className="text-gray-500">
-                    {props.durationMinutes} min
+                    {formatDuration(props.durationMinutes)}
                   </div>
                 </div>
               </Popup>

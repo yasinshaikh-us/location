@@ -6,6 +6,7 @@ import {
   simplifyRoute,
   reverseGeocodeStops,
 } from "@/lib/simplify";
+import { pacificDayBoundsUtc, todayInPacific } from "@/lib/format";
 import type {
   QueryRequestBody,
   QueryResponseBody,
@@ -16,6 +17,10 @@ import type {
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const OFF_TOPIC_MESSAGE =
+  "This app only answers questions about your own past location history — try something like \"where was I last Tuesday?\"";
 
 export async function POST(
   req: NextRequest
@@ -31,17 +36,40 @@ export async function POST(
       );
     }
 
-    // 1. Anchor "today" to the server's actual current date, then ask
-    //    Claude to turn the NL question into a concrete date range.
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const { start, end, reasoning } = await parseDateRangeFromQuestion(
-      question,
-      todayIso
-    );
+    // 1. Anchor "today" to the server's actual current date in Pacific
+    //    Time (not the server's own timezone), then ask Claude to turn
+    //    the NL question into a concrete date range. This call also
+    //    acts as the topic guardrail: this app only answers questions
+    //    about the user's own location history, not general-purpose AI
+    //    queries, so anything else is rejected here before it ever
+    //    reaches the database or the summary model.
+    const todayIso = todayInPacific();
+    const parsed = await parseDateRangeFromQuestion(question, todayIso);
 
-    // Convert inclusive date-only range into full-day ISO timestamps.
-    const startIso = `${start}T00:00:00.000Z`;
-    const endIso = `${end}T23:59:59.999Z`;
+    if (!parsed.isLocationQuery || !parsed.start || !parsed.end) {
+      return NextResponse.json({ error: OFF_TOPIC_MESSAGE }, { status: 400 });
+    }
+
+    const { start, end, reasoning } = parsed;
+
+    // Defense in depth: even though this came from our own prompt
+    // contract rather than raw user input, never let anything but a
+    // well-formed date reach the database query below.
+    if (
+      !DATE_ONLY_RE.test(start) ||
+      !DATE_ONLY_RE.test(end) ||
+      start > end
+    ) {
+      return NextResponse.json(
+        { error: "Could not resolve a valid date range for that question." },
+        { status: 400 }
+      );
+    }
+
+    // Convert the inclusive Pacific-time date range into UTC timestamps
+    // for the query — a Pacific calendar day doesn't start at 00:00 UTC.
+    const startIso = pacificDayBoundsUtc(start).startIso;
+    const endIso = pacificDayBoundsUtc(end).endIso;
 
     // 2. Pull raw pings from Supabase/PostGIS for that range.
     const pings = await fetchPingsInRange(startIso, endIso);
@@ -58,7 +86,7 @@ export async function POST(
         : rawStops;
 
     // 5. Ask Claude for a short natural-language summary of the period.
-    const summary = await summarizeStops(question, stops);
+    const summary = await summarizeStops(question, stops, { start, end });
 
     // 6. Build GeoJSON for the map layer.
     const geojson: GeoJSONFeatureCollection = {
@@ -112,7 +140,9 @@ export async function POST(
       dateRange: { start, end },
       summary:
         stops.length === 0
-          ? `No location data was recorded between ${start} and ${end}. (${reasoning})`
+          ? `No location data was recorded between ${start} and ${end}.${
+              reasoning ? ` (${reasoning})` : ""
+            }`
           : summary,
       stops,
       route: simplifiedRoute,

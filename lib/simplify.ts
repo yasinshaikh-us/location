@@ -191,10 +191,20 @@ export async function reverseGeocodeStops(stops: Stop[]): Promise<Stop[]> {
 
       if (res.ok) {
         const data = await res.json();
+        const address = data.address ?? {};
+        // Prefer neighborhood-level area names over a precise street
+        // address — "Capitol Hill" reads better in a summary/table than
+        // "1234 15th Ave E", and approximate is fine for this app.
         const name =
+          address.neighbourhood ||
+          address.suburb ||
+          address.quarter ||
+          address.city_district ||
+          address.town ||
+          address.village ||
+          address.city ||
           data.name ||
-          data.address?.road ||
-          data.address?.suburb ||
+          address.road ||
           data.display_name?.split(",").slice(0, 2).join(",");
         results.push({ ...stop, placeName: name });
       } else {
