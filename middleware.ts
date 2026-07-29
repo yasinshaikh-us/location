@@ -2,9 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
 
 // Routes that must remain reachable without a session: the PIN screen
-// itself, and the health check (booleans/lengths only, no secrets —
-// kept public specifically so it's usable to diagnose a broken login).
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health"];
+// itself, the health check (booleans/lengths only, no secrets — kept
+// public specifically so it's usable to diagnose a broken login), and
+// the PWA install assets. The manifest/icons/service worker have to be
+// fetchable from the unauthenticated /login screen too — that's the
+// only page a browser can see before first login, so if these 401 or
+// redirect, the app never gets flagged as installable. None of them
+// expose anything beyond the app's name/branding.
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth/login",
+  "/api/health",
+  "/manifest.webmanifest",
+  "/icon",
+  "/apple-icon",
+  "/sw.js",
+];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
