@@ -18,6 +18,10 @@ import type {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const OFF_TOPIC_MESSAGE =
+  "This app only answers questions about your own past location history — try something like \"where was I last Tuesday?\"";
+
 export async function POST(
   req: NextRequest
 ): Promise<NextResponse<QueryResponseBody | ApiErrorBody>> {
@@ -34,12 +38,33 @@ export async function POST(
 
     // 1. Anchor "today" to the server's actual current date in Pacific
     //    Time (not the server's own timezone), then ask Claude to turn
-    //    the NL question into a concrete date range.
+    //    the NL question into a concrete date range. This call also
+    //    acts as the topic guardrail: this app only answers questions
+    //    about the user's own location history, not general-purpose AI
+    //    queries, so anything else is rejected here before it ever
+    //    reaches the database or the summary model.
     const todayIso = todayInPacific();
-    const { start, end, reasoning } = await parseDateRangeFromQuestion(
-      question,
-      todayIso
-    );
+    const parsed = await parseDateRangeFromQuestion(question, todayIso);
+
+    if (!parsed.isLocationQuery || !parsed.start || !parsed.end) {
+      return NextResponse.json({ error: OFF_TOPIC_MESSAGE }, { status: 400 });
+    }
+
+    const { start, end, reasoning } = parsed;
+
+    // Defense in depth: even though this came from our own prompt
+    // contract rather than raw user input, never let anything but a
+    // well-formed date reach the database query below.
+    if (
+      !DATE_ONLY_RE.test(start) ||
+      !DATE_ONLY_RE.test(end) ||
+      start > end
+    ) {
+      return NextResponse.json(
+        { error: "Could not resolve a valid date range for that question." },
+        { status: 400 }
+      );
+    }
 
     // Convert the inclusive Pacific-time date range into UTC timestamps
     // for the query — a Pacific calendar day doesn't start at 00:00 UTC.
@@ -115,7 +140,9 @@ export async function POST(
       dateRange: { start, end },
       summary:
         stops.length === 0
-          ? `No location data was recorded between ${start} and ${end}. (${reasoning})`
+          ? `No location data was recorded between ${start} and ${end}.${
+              reasoning ? ` (${reasoning})` : ""
+            }`
           : summary,
       stops,
       route: simplifiedRoute,

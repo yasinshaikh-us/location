@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { checkDatabaseConnectivity } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -24,16 +24,7 @@ export async function GET() {
     ? `set (length ${process.env.SITE_PIN.length})`
     : "MISSING";
 
-  let dbStatus = "unknown";
-  try {
-    const supabase = getSupabaseServerClient();
-    const { count, error } = await supabase
-      .from("location_pings")
-      .select("*", { count: "exact", head: true });
-    dbStatus = error ? `error: ${error.message}` : `ok (${count} rows)`;
-  } catch (e) {
-    dbStatus = `error: ${e instanceof Error ? e.message : "unknown"}`;
-  }
+  const dbStatus = await checkDatabaseConnectivity();
 
   return NextResponse.json({ env: checks, database: dbStatus });
 }
