@@ -64,7 +64,10 @@ export function verifyPin(candidate: string): boolean {
   if (!realPin) {
     throw new Error("Missing SITE_PIN env var");
   }
-  return timingSafeEqualStr(candidate, realPin);
+  // Trim whitespace/newlines on both sides — env vars shared across
+  // multiple Vercel projects can pick up trailing whitespace depending
+  // on how they were set, and this should still match cleanly.
+  return timingSafeEqualStr(candidate.trim(), realPin.trim());
 }
 
 export const SESSION_COOKIE_NAME = COOKIE_NAME;

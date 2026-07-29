@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
 
-// Routes that must remain reachable without a session, so the PIN
-// screen itself can load and submit.
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+// Routes that must remain reachable without a session: the PIN screen
+// itself, and the health check (booleans/lengths only, no secrets —
+// kept public specifically so it's usable to diagnose a broken login).
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
