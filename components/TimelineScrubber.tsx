@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import type { Stop } from "@/lib/simplify";
 
 interface TimelineScrubberProps {
@@ -9,9 +10,15 @@ interface TimelineScrubberProps {
   currentMs: number;
   onScrub: (ms: number) => void;
   stops: Stop[];
+  /** Starts playback automatically on mount. Defaults to true. */
+  autoPlay?: boolean;
 }
 
-const PLAYBACK_SPEED_MS_PER_SEC = 1000 * 60 * 15; // 15 sim-minutes per real second
+// Sim-time advances this fast per real second while actually in transit...
+const MOVING_MS_PER_SEC = 1000 * 60 * 6;
+// ...and this many times faster while parked at a stop, so replay doesn't
+// crawl through hours spent sitting still.
+const STOPPED_SPEED_MULTIPLIER = 18;
 
 export default function TimelineScrubber({
   startMs,
@@ -19,13 +26,21 @@ export default function TimelineScrubber({
   currentMs,
   onScrub,
   stops,
+  autoPlay = true,
 }: TimelineScrubberProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
+  // Tracks sim time across animation frames directly, rather than
+  // re-deriving it from the (possibly stale) `currentMs` prop closure.
+  const simMsRef = useRef(currentMs);
 
   const span = Math.max(endMs - startMs, 1);
   const progress = Math.min(Math.max((currentMs - startMs) / span, 0), 1);
+
+  useEffect(() => {
+    simMsRef.current = currentMs;
+  }, [currentMs]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -34,17 +49,31 @@ export default function TimelineScrubber({
       return;
     }
 
+    function isStoppedAt(ms: number) {
+      return stops.some((s) => {
+        const arrival = new Date(s.arrival).getTime();
+        const departure = new Date(s.departure).getTime();
+        return ms >= arrival && ms <= departure;
+      });
+    }
+
     function tick(now: number) {
       if (lastFrameRef.current == null) lastFrameRef.current = now;
       const deltaSec = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
 
-      const next = currentMs + deltaSec * PLAYBACK_SPEED_MS_PER_SEC;
+      const speed = isStoppedAt(simMsRef.current)
+        ? MOVING_MS_PER_SEC * STOPPED_SPEED_MULTIPLIER
+        : MOVING_MS_PER_SEC;
+
+      const next = simMsRef.current + deltaSec * speed;
       if (next >= endMs) {
+        simMsRef.current = endMs;
         onScrub(endMs);
         setIsPlaying(false);
         return;
       }
+      simMsRef.current = next;
       onScrub(next);
       rafRef.current = requestAnimationFrame(tick);
     }
@@ -54,15 +83,18 @@ export default function TimelineScrubber({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying]);
+  }, [isPlaying, endMs]);
 
   function handleSliderChange(value: number) {
     setIsPlaying(false);
-    onScrub(startMs + (value / 1000) * span);
+    const ms = startMs + (value / 1000) * span;
+    simMsRef.current = ms;
+    onScrub(ms);
   }
 
   function togglePlay() {
     if (progress >= 0.999) {
+      simMsRef.current = startMs;
       onScrub(startMs);
     }
     setIsPlaying((p) => !p);
@@ -86,17 +118,17 @@ export default function TimelineScrubber({
         <button
           onClick={togglePlay}
           aria-label={isPlaying ? "Pause" : "Play"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition hover:bg-blue-700 active:scale-95"
         >
           {isPlaying ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="5" y="4" width="5" height="16" rx="1" />
-              <rect x="14" y="4" width="5" height="16" rx="1" />
-            </svg>
+            <Pause size={16} fill="currentColor" strokeWidth={0} />
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6 4.5v15l13-7.5-13-7.5z" />
-            </svg>
+            <Play
+              size={16}
+              fill="currentColor"
+              strokeWidth={0}
+              className="ml-0.5"
+            />
           )}
         </button>
 
