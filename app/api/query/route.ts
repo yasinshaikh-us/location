@@ -6,6 +6,7 @@ import {
   simplifyRoute,
   reverseGeocodeStops,
 } from "@/lib/simplify";
+import { pacificDayBoundsUtc, todayInPacific } from "@/lib/format";
 import type {
   QueryRequestBody,
   QueryResponseBody,
@@ -31,17 +32,19 @@ export async function POST(
       );
     }
 
-    // 1. Anchor "today" to the server's actual current date, then ask
-    //    Claude to turn the NL question into a concrete date range.
-    const todayIso = new Date().toISOString().slice(0, 10);
+    // 1. Anchor "today" to the server's actual current date in Pacific
+    //    Time (not the server's own timezone), then ask Claude to turn
+    //    the NL question into a concrete date range.
+    const todayIso = todayInPacific();
     const { start, end, reasoning } = await parseDateRangeFromQuestion(
       question,
       todayIso
     );
 
-    // Convert inclusive date-only range into full-day ISO timestamps.
-    const startIso = `${start}T00:00:00.000Z`;
-    const endIso = `${end}T23:59:59.999Z`;
+    // Convert the inclusive Pacific-time date range into UTC timestamps
+    // for the query — a Pacific calendar day doesn't start at 00:00 UTC.
+    const startIso = pacificDayBoundsUtc(start).startIso;
+    const endIso = pacificDayBoundsUtc(end).endIso;
 
     // 2. Pull raw pings from Supabase/PostGIS for that range.
     const pings = await fetchPingsInRange(startIso, endIso);
@@ -58,7 +61,7 @@ export async function POST(
         : rawStops;
 
     // 5. Ask Claude for a short natural-language summary of the period.
-    const summary = await summarizeStops(question, stops);
+    const summary = await summarizeStops(question, stops, { start, end });
 
     // 6. Build GeoJSON for the map layer.
     const geojson: GeoJSONFeatureCollection = {

@@ -59,3 +59,65 @@ export function formatDuration(minutes: number): string {
   const remaining = minutes % 60;
   return remaining === 0 ? `${hours}h` : `${hours}h ${remaining}m`;
 }
+
+/**
+ * The UTC-minus-Pacific offset (in ms) in effect at a given instant,
+ * accounting for PST/PDT automatically. `localWallClockMs = utcMs +
+ * offset`, so `utcMs = localWallClockMs - offset`.
+ */
+function pacificOffsetMs(utcMs: number): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(utcMs));
+
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second")
+  );
+  return asUtc - utcMs;
+}
+
+/**
+ * Converts a "YYYY-MM-DD" *Pacific-time* calendar date into the UTC
+ * instants for its local midnight and its final millisecond
+ * (00:00:00.000 and 23:59:59.999 Pacific, expressed as UTC ISO strings).
+ * Used so a "day" in query ranges/results matches the Pacific-time day
+ * actually shown in the UI, rather than a UTC day (which, at UTC-7/-8,
+ * would start ~7-8 hours before Pacific midnight and clip the evening).
+ */
+export function pacificDayBoundsUtc(dateOnlyIso: string): {
+  startIso: string;
+  endIso: string;
+} {
+  const [y, m, d] = dateOnlyIso.split("-").map(Number);
+  const startGuess = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
+  const endGuess = Date.UTC(y, m - 1, d, 23, 59, 59, 999);
+  return {
+    startIso: new Date(startGuess - pacificOffsetMs(startGuess)).toISOString(),
+    endIso: new Date(endGuess - pacificOffsetMs(endGuess)).toISOString(),
+  };
+}
+
+/** Today's date as "YYYY-MM-DD" in Pacific Time, not the server's own timezone. */
+export function todayInPacific(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
