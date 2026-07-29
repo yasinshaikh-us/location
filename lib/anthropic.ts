@@ -85,8 +85,8 @@ export async function summarizeStops(
   }));
 
   const system = `You are summarizing someone's own location history back to them, based on GPS stop data.
-Be concise (3-6 sentences), speak in second person ("you were..."), and mention approximate times and place names when available.
-Do not invent details not present in the data. If place names are missing, describe by neighborhood/coordinates generally.`;
+Be concise (3-6 sentences), speak in second person ("you were..."), and mention approximate times and general areas when available.
+Do not invent details not present in the data. Refer to places by neighborhood or general area (e.g. "the Capitol Hill area") rather than exact street addresses — approximate is fine, readability matters more than precision here. If no place name is available, describe by neighborhood/coordinates generally.`;
 
   const response = await anthropic.messages.create({
     model: MODEL,

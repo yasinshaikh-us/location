@@ -11,7 +11,6 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Navigation2 } from "lucide-react";
 import type { GeoJSONFeatureCollection } from "@/lib/types";
 import { formatDateTime, formatDuration } from "@/lib/format";
 
@@ -73,8 +72,9 @@ const START_COLOR = "#059669"; // green
 const END_COLOR = "#dc2626"; // red
 const STOP_COLOR = "#1d4ed8"; // blue
 
+/** Plain orange dot marking the current replay position; pulses while moving. */
 function playheadIcon(isMoving: boolean) {
-  const size = 30;
+  const size = 22;
   const html = renderToStaticMarkup(
     <div style={{ position: "relative", width: size, height: size }}>
       {isMoving && (
@@ -83,7 +83,7 @@ function playheadIcon(isMoving: boolean) {
             position: "absolute",
             inset: 0,
             borderRadius: "9999px",
-            background: "rgba(37,99,235,0.35)",
+            background: "rgba(249,115,22,0.35)",
             animation: "lt-pulse 1.4s ease-out infinite",
           }}
         />
@@ -91,18 +91,13 @@ function playheadIcon(isMoving: boolean) {
       <div
         style={{
           position: "absolute",
-          inset: 4,
+          inset: 3,
           borderRadius: "9999px",
-          background: "#2563eb",
-          border: "3px solid white",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          background: "#f97316",
+          border: "2px solid white",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
         }}
-      >
-        <Navigation2 color="white" size={12} strokeWidth={3} />
-      </div>
+      />
     </div>
   );
   return buildDivIcon(html, size);

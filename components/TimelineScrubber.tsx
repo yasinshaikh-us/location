@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import type { Stop } from "@/lib/simplify";
+import { formatTime } from "@/lib/format";
 
 interface TimelineScrubberProps {
   startMs: number;
@@ -100,10 +101,7 @@ export default function TimelineScrubber({
     setIsPlaying((p) => !p);
   }
 
-  const timeLabel = new Date(currentMs).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const timeLabel = formatTime(currentMs, { withZoneAbbr: true });
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">

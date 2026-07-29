@@ -28,12 +28,12 @@ const columns = [
       <span className="font-medium text-slate-800">{info.getValue()}</span>
     ),
   }),
-  columnHelper.accessor("arrival", {
-    header: "Arrived",
-    cell: (info) => formatDateTime(info.getValue()),
-  }),
   columnHelper.accessor("departure", {
     header: "Departed",
+    cell: (info) => formatDateTime(info.getValue()),
+  }),
+  columnHelper.accessor("arrival", {
+    header: "Arrived",
     cell: (info) => formatDateTime(info.getValue()),
   }),
   columnHelper.accessor("durationMinutes", {

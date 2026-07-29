@@ -24,17 +24,31 @@ export function formatShortDate(dateOnlyIso: string): string {
   return `${MONTHS[month - 1]} ${day}`;
 }
 
-/** Full ISO timestamp -> "4:32 PM" (no seconds, viewer's local time). */
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
+// All timestamps in the UI are shown in Pacific Time regardless of the
+// viewer's own device/browser timezone, since the location history this
+// app displays is inherently tied to the Pacific-time-zone person it
+// belongs to. "America/Los_Angeles" resolves to PST or PDT automatically
+// depending on daylight saving.
+const TIME_ZONE = "America/Los_Angeles";
+
+/** Full ISO timestamp -> "4:32 PM" (no seconds, always Pacific Time). */
+export function formatTime(
+  iso: string | number,
+  opts: { withZoneAbbr?: boolean } = {}
+): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: TIME_ZONE,
+    ...(opts.withZoneAbbr ? { timeZoneName: "short" } : {}),
   });
 }
 
-/** Full ISO timestamp -> "Sep 20, 4:32 PM" (no year, no seconds). */
+/** Full ISO timestamp -> "Sep 20, 4:32 PM" (no year, no seconds, Pacific Time). */
 export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
+  const d = new Date(
+    new Date(iso).toLocaleString("en-US", { timeZone: TIME_ZONE })
+  );
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${formatTime(iso)}`;
 }
 
