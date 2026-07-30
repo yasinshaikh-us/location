@@ -158,8 +158,12 @@ pages *and* API endpoints — is gated behind a 6-digit PIN, enforced in
 
 - `/login` — PIN entry screen, the only page reachable without a session
 - `/api/auth/login` — the only API route reachable without a session;
-  verifies the PIN against `SITE_PIN` and issues a signed, `httpOnly` session
-  cookie valid for 30 days
+  rate-limited per IP, verifies the PIN against `SITE_PIN`, and issues a
+  signed, `httpOnly` session cookie valid for 30 days
+- `/api/health` — also reachable without a session (so a broken login is
+  still diagnosable), but only ever reports whether each secret is `set`
+  or `MISSING` — never a value, and not even a PIN length, since that
+  would shrink the search space for the rate limiter above
 - Everything else — any other page, and critically `/api/query` itself —
   returns a redirect (pages) or a 401 (API calls) without a valid cookie
 
@@ -219,8 +223,11 @@ failure surfaces before the slower browser test ever runs.
 - **No auth on the app itself** — anyone with the URL can query your
   location history. **Update: this is now handled** — see "Access control"
   above. The PIN is a single shared secret (fine for personal use by one
-  person); it's not per-user accounts, rate-limited, or lockout-protected
-  against repeated guesses, so treat it like a door key, not a bank login.
+  person), not per-user accounts. Repeated wrong guesses from the same IP
+  are throttled (8 attempts per 5-minute window, `lib/auth.ts`) — an
+  in-memory, per-isolate guard, same caveat as the scorecard app's: it
+  resets on cold start and isn't shared across regions, so treat it as a
+  deterrent against naive scripts, not a hard limit.
 - **Stop-clustering thresholds are fixed** (120m radius, 8min minimum) in
   `lib/simplify.ts` — tune `STOP_RADIUS_METERS` / `MIN_STOP_MINUTES` if
   your commute pattern needs different sensitivity.

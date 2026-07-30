@@ -19,7 +19,7 @@ describe("GET /api/health", () => {
     process.env = { ...realEnv };
   });
 
-  it("reports every required env var as set, and the PIN's length (never its value)", async () => {
+  it("reports every required env var as set (never the PIN's value or length)", async () => {
     process.env.ANTHROPIC_API_KEY = "x";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
@@ -35,7 +35,7 @@ describe("GET /api/health", () => {
       NEXT_PUBLIC_SUPABASE_URL: "set",
       SUPABASE_SERVICE_ROLE_KEY: "set",
       SESSION_SECRET: "set",
-      SITE_PIN: "set (length 6)",
+      SITE_PIN: "set",
     });
     expect(body.env.SITE_PIN).not.toContain("482196");
     expect(body.database).toBe("ok (12 rows)");
@@ -61,12 +61,12 @@ describe("GET /api/health", () => {
     });
   });
 
-  it("surfaces trailing-whitespace-corrupted PINs via the reported length", async () => {
+  it("never reveals a length hint, even for a trailing-whitespace-corrupted PIN", async () => {
     process.env.SITE_PIN = "482196\n";
     mockCheckDatabaseConnectivity.mockResolvedValue("ok (0 rows)");
 
     const res = await GET();
     const body = await res.json();
-    expect(body.env.SITE_PIN).toBe("set (length 7)");
+    expect(body.env.SITE_PIN).toBe("set");
   });
 });

@@ -7,6 +7,35 @@
 const COOKIE_NAME = "lt_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
+// Best-effort in-memory brute-force guard on PIN attempts. State is
+// per-isolate (resets on cold start / redeploy, and isn't shared across
+// regions), but it's enough to stop a naive script from hammering a
+// numeric PIN. Same design as the scorecard app's lib/auth.js, so both
+// PIN gates share one security model.
+export const MAX_ATTEMPTS = 8;
+const WINDOW_MS = 5 * 60 * 1000;
+const attemptsByIp = new Map<string, { windowStart: number; count: number }>();
+
+export function tooManyAttempts(ip: string): boolean {
+  const now = Date.now();
+  const entry = attemptsByIp.get(ip);
+  if (!entry || now - entry.windowStart > WINDOW_MS) {
+    attemptsByIp.set(ip, { windowStart: now, count: 0 });
+    return false;
+  }
+  return entry.count >= MAX_ATTEMPTS;
+}
+
+export function recordFailedAttempt(ip: string): void {
+  const now = Date.now();
+  const entry = attemptsByIp.get(ip);
+  if (!entry || now - entry.windowStart > WINDOW_MS) {
+    attemptsByIp.set(ip, { windowStart: now, count: 1 });
+  } else {
+    entry.count += 1;
+  }
+}
+
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {

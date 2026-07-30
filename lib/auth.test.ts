@@ -3,6 +3,9 @@ import {
   createSessionToken,
   verifySessionToken,
   verifyPin,
+  tooManyAttempts,
+  recordFailedAttempt,
+  MAX_ATTEMPTS,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
 } from "./auth";
@@ -98,6 +101,28 @@ describe("verifyPin", () => {
   it("throws when SITE_PIN is missing", () => {
     delete process.env.SITE_PIN;
     expect(() => verifyPin("482196")).toThrow("Missing SITE_PIN");
+  });
+});
+
+describe("tooManyAttempts / recordFailedAttempt", () => {
+  it("a fresh IP is never too many", () => {
+    expect(tooManyAttempts("10.0.0.1")).toBe(false);
+  });
+
+  it("locks out after MAX_ATTEMPTS failures from the same IP", () => {
+    const ip = "10.0.0.2";
+    expect(tooManyAttempts(ip)).toBe(false); // seeds the window
+    for (let i = 0; i < MAX_ATTEMPTS; i++) recordFailedAttempt(ip);
+    expect(tooManyAttempts(ip)).toBe(true);
+  });
+
+  it("doesn't affect other IPs", () => {
+    const ip = "10.0.0.3";
+    const otherIp = "10.0.0.4";
+    tooManyAttempts(ip);
+    for (let i = 0; i < MAX_ATTEMPTS; i++) recordFailedAttempt(ip);
+    expect(tooManyAttempts(ip)).toBe(true);
+    expect(tooManyAttempts(otherIp)).toBe(false);
   });
 });
 
