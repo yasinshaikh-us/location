@@ -17,8 +17,8 @@ interface MapViewProps {
 }
 
 const DEFAULT_CENTER: [number, number] = [-122.1795, 47.6205]; // [lon, lat] — Kirkland, WA fallback
-const DARK_STYLE = "mapbox://styles/mapbox/dark-v11";
-const LIGHT_STYLE = "mapbox://styles/mapbox/light-v11";
+const DARK_STYLE = "mapbox://styles/mapbox/navigation-night-v1";
+const LIGHT_STYLE = "mapbox://styles/mapbox/streets-v12";
 const ROUTE_SOURCE_ID = "location-timeline-route";
 const ROUTE_LAYER_ID = "location-timeline-route-line";
 
