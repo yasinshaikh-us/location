@@ -25,6 +25,7 @@ describe("GET /api/health", () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
     process.env.SESSION_SECRET = "x";
     process.env.SITE_PIN = "482196";
+    process.env.MAPBOX_TOKEN = "x";
     mockCheckDatabaseConnectivity.mockResolvedValue("ok (12 rows)");
 
     const res = await GET();
@@ -36,6 +37,7 @@ describe("GET /api/health", () => {
       SUPABASE_SERVICE_ROLE_KEY: "set",
       SESSION_SECRET: "set",
       SITE_PIN: "set",
+      MAPBOX_TOKEN: "set",
     });
     expect(body.env.SITE_PIN).not.toContain("482196");
     expect(body.database).toBe("ok (12 rows)");
@@ -47,6 +49,7 @@ describe("GET /api/health", () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.SESSION_SECRET;
     delete process.env.SITE_PIN;
+    delete process.env.MAPBOX_TOKEN;
     mockCheckDatabaseConnectivity.mockResolvedValue("error: missing env vars");
 
     const res = await GET();
@@ -58,6 +61,7 @@ describe("GET /api/health", () => {
       SUPABASE_SERVICE_ROLE_KEY: "MISSING",
       SESSION_SECRET: "MISSING",
       SITE_PIN: "MISSING",
+      MAPBOX_TOKEN: "MISSING",
     });
   });
 

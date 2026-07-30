@@ -73,6 +73,3 @@ body {
   height: 100%;
 }
 
-/* Leaflet's default marker icons reference image paths that don't
-   resolve correctly under Next.js bundling; MapView.tsx patches the
-   icon URLs directly instead of relying on CSS here. */
