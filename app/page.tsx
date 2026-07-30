@@ -9,7 +9,7 @@ import RouteTable from "@/components/RouteTable";
 import TimelineScrubber from "@/components/TimelineScrubber";
 import ThemeToggle from "@/components/ThemeToggle";
 import { interpolatePosition } from "@/lib/interpolate";
-import { formatShortDate } from "@/lib/format";
+import { formatShortDate, stripMarkdownEmphasis } from "@/lib/format";
 import type { QueryResponseBody, ApiErrorBody } from "@/lib/types";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -136,7 +136,7 @@ export default function HomePage() {
                     )}`}
               </div>
               <p className="text-sm leading-relaxed text-muted">
-                {result.summary}
+                {stripMarkdownEmphasis(result.summary)}
               </p>
             </div>
 

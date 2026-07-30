@@ -101,7 +101,7 @@ export default function TimelineScrubber({
     setIsPlaying((p) => !p);
   }
 
-  const timeLabel = formatTime(currentMs, { withZoneAbbr: true });
+  const timeLabel = formatTime(currentMs);
 
   return (
     <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur">

@@ -52,6 +52,19 @@ export function formatDateTime(iso: string): string {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${formatTime(iso)}`;
 }
 
+/**
+ * Strips markdown emphasis markers (**bold**, __bold__, *italic*,
+ * _italic_) from LLM-generated prose that's rendered as plain text
+ * rather than through a markdown renderer.
+ */
+export function stripMarkdownEmphasis(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/_(.+?)_/g, "$1");
+}
+
 /** Minutes -> "26 min" under an hour, "16h 57m" / "17h" at or above. */
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
