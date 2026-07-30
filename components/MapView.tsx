@@ -163,7 +163,12 @@ export default function MapView({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={13}
-        scrollWheelZoom
+        scrollWheelZoom={false}
+        dragging={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+        boxZoom={false}
+        keyboard={false}
         className="h-full w-full rounded-2xl"
       >
         <TileLayer

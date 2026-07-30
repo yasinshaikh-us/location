@@ -21,6 +21,17 @@ interface RouteTableProps {
 
 const columnHelper = createColumnHelper<TableRow>();
 
+// Column widths as percentages so the table stays a fixed layout (see
+// `table-fixed` below) and truncates overflowing text instead of
+// stretching wider than the map above it — same approach as the
+// scorecard app's transaction table.
+const COLUMN_WIDTHS: Record<string, string> = {
+  place: "31%",
+  arrival: "27%",
+  departure: "27%",
+  durationMinutes: "15%",
+};
+
 const columns = [
   columnHelper.accessor("place", {
     header: "Place",
@@ -39,7 +50,7 @@ const columns = [
   columnHelper.accessor("durationMinutes", {
     header: "Duration",
     cell: (info) => (
-      <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-xs font-medium tabular-nums text-muted">
+      <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted">
         {formatDuration(info.getValue())}
       </span>
     ),
@@ -72,8 +83,8 @@ export default function RouteTable({
   }
 
   return (
-    <div className="overflow-x-auto bg-surface">
-      <table className="w-full min-w-[560px] text-sm">
+    <div className="bg-surface">
+      <table className="w-full table-fixed text-[13px]">
         <thead className="bg-surface-recessed text-left">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
@@ -82,7 +93,8 @@ export default function RouteTable({
                 return (
                   <th
                     key={header.id}
-                    className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted"
+                    style={{ width: COLUMN_WIDTHS[header.column.id] }}
+                    className="cursor-pointer select-none overflow-hidden text-ellipsis whitespace-nowrap px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <span className="inline-flex items-center gap-1">
@@ -116,7 +128,7 @@ export default function RouteTable({
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="whitespace-nowrap px-3 py-2.5 text-muted"
+                    className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-2 text-muted"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
