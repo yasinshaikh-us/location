@@ -89,7 +89,7 @@ Fill in `.env.local`:
 | Variable | Where to find it |
 |---|---|
 | `ANTHROPIC_API_KEY` | Your existing Anthropic API key |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
+| `SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → `service_role` secret key |
 | `ANTHROPIC_MODEL` | Optional, defaults to `claude-sonnet-4-6` |
 | `SITE_PIN` | Any digit string you choose — required to access the app |
@@ -97,9 +97,10 @@ Fill in `.env.local`:
 
 **`SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security** — it's what lets
 the server read all of `location_pings` regardless of RLS policies. It must
-never be exposed to the browser; that's why it's not prefixed
-`NEXT_PUBLIC_`, and it's only ever read inside `lib/supabase.ts`, which is
-imported exclusively by server-side API routes.
+never be exposed to the browser. Neither it nor `SUPABASE_URL` uses the
+`NEXT_PUBLIC_` prefix — both are only ever read inside `lib/supabase.ts`,
+which is imported exclusively by server-side API routes, so neither needs
+to (or should) reach client-side JavaScript.
 
 ```bash
 npm run dev
