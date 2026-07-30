@@ -51,7 +51,7 @@ function stopIcon(label: string, color: string, isSelected: boolean) {
         borderRadius: "9999px",
         background: color,
         boxShadow: isSelected
-          ? "0 0 0 6px rgba(37,99,235,0.22), 0 2px 8px rgba(0,0,0,0.35)"
+          ? "0 0 0 6px rgb(var(--accent) / 0.22), 0 2px 8px rgba(0,0,0,0.35)"
           : "0 2px 6px rgba(0,0,0,0.3)",
         border: "2px solid white",
         color: "white",
@@ -68,9 +68,9 @@ function stopIcon(label: string, color: string, isSelected: boolean) {
   return buildDivIcon(html, size);
 }
 
-const START_COLOR = "#059669"; // green
-const END_COLOR = "#dc2626"; // red
-const STOP_COLOR = "#1d4ed8"; // blue
+const START_COLOR = "#059669"; // green — semantic (start), not part of the brand accent
+const END_COLOR = "#dc2626"; // red — semantic (end), not part of the brand accent
+const STOP_COLOR = "rgb(var(--accent))"; // brand accent, follows the current theme live
 
 /** Plain orange dot marking the current replay position; pulses while moving. */
 function playheadIcon(isMoving: boolean) {
@@ -175,7 +175,7 @@ export default function MapView({
         {routeCoords.length > 1 && (
           <Polyline
             positions={routeCoords}
-            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.55 }}
+            pathOptions={{ color: "rgb(var(--accent))", weight: 4, opacity: 0.55 }}
           />
         )}
 
@@ -209,7 +209,7 @@ export default function MapView({
                     {formatDateTime(props.arrival)} –{" "}
                     {formatDateTime(props.departure)}
                   </div>
-                  <div className="text-gray-500">
+                  <div className="text-faint">
                     {formatDuration(props.durationMinutes)}
                   </div>
                 </div>

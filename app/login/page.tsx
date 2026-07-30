@@ -2,6 +2,7 @@
 
 import { useState, useRef, type KeyboardEvent, type ClipboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const PIN_LENGTH = 6;
 
@@ -75,9 +76,13 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-6 text-white">
+    <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-bg px-6 text-text">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+
       <div className="flex flex-col items-center gap-2">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/20 ring-1 ring-blue-500/40">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 ring-1 ring-accent/40">
           <svg
             width="28"
             height="28"
@@ -85,7 +90,7 @@ export default function LoginPage() {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className="text-blue-400"
+            className="text-accent"
           >
             <path d="M12 21s-7-5.686-7-11a7 7 0 1 1 14 0c0 5.314-7 11-7 11z" />
             <circle cx="12" cy="10" r="2.5" />
@@ -94,7 +99,7 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold tracking-tight">
           Location Timeline
         </h1>
-        <p className="text-sm text-slate-400">Enter your PIN to continue</p>
+        <p className="text-sm text-faint">Enter your PIN to continue</p>
       </div>
 
       <div className="flex gap-2 sm:gap-3">
@@ -112,18 +117,18 @@ export default function LoginPage() {
             onChange={(e) => updateDigit(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
             onPaste={handlePaste}
-            className={`h-14 w-11 rounded-xl border bg-slate-800/60 text-center text-2xl font-semibold text-white outline-none transition sm:h-16 sm:w-14 ${
+            className={`h-14 w-11 rounded-xl border bg-surface-recessed text-center font-mono text-2xl font-semibold text-text outline-none transition sm:h-16 sm:w-14 ${
               error
-                ? "border-red-500/60 focus:border-red-400"
-                : "border-slate-700 focus:border-blue-500"
+                ? "border-danger focus:border-danger"
+                : "border-border focus:border-accent"
             } disabled:opacity-50`}
           />
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      <p className="max-w-xs text-center text-xs text-slate-500">
+      <p className="max-w-xs text-center text-xs text-faint">
         This gates access to personal location history. Enter the 6-digit PIN
         set for this app.
       </p>

@@ -104,10 +104,10 @@ export default function TimelineScrubber({
   const timeLabel = formatTime(currentMs, { withZoneAbbr: true });
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+    <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-500">Replay</span>
-        <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold tabular-nums text-white">
+        <span className="text-sm font-medium text-faint">Replay</span>
+        <span className="rounded-full bg-accent px-3 py-1 font-mono text-sm font-semibold tabular-nums text-bg">
           {timeLabel}
         </span>
       </div>
@@ -116,7 +116,7 @@ export default function TimelineScrubber({
         <button
           onClick={togglePlay}
           aria-label={isPlaying ? "Pause" : "Play"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition hover:bg-blue-700 active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-bg transition hover:bg-accent-strong active:scale-95"
         >
           {isPlaying ? (
             <Pause size={16} fill="currentColor" strokeWidth={0} />
@@ -140,7 +140,7 @@ export default function TimelineScrubber({
               return (
                 <div
                   key={i}
-                  className="absolute h-2 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/70"
+                  className="absolute h-2 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/70"
                   style={{ left: `${pct}%`, top: "50%" }}
                 />
               );
@@ -153,7 +153,7 @@ export default function TimelineScrubber({
             max={1000}
             value={progress * 1000}
             onChange={(e) => handleSliderChange(Number(e.target.value))}
-            className="relative w-full accent-blue-600"
+            className="relative w-full accent-accent"
             style={{ height: "24px" }}
           />
         </div>
