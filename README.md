@@ -188,6 +188,29 @@ animating over data already sitting in React state. Scrubbing into a date
 range outside what was originally queried isn't supported — that would need
 a fresh query.
 
+## Running tests
+
+```bash
+npm test          # unit tests (Vitest) — pure logic + lib/ boundaries + API routes + middleware
+npm run test:e2e  # one end-to-end smoke test (Playwright), mocked /api/query, no real credentials needed
+```
+
+`npm test` is fast (no browser) and covers `lib/format.ts`, `lib/interpolate.ts`,
+`lib/simplify.ts` (stop clustering, route simplification, reverse geocoding),
+and `lib/auth.ts` directly; `lib/supabase.ts` and `lib/anthropic.ts` with their
+respective clients mocked at the module boundary; and every `app/api/*/route.ts`
+handler and `middleware.ts` with their `lib/` collaborators mocked so each
+layer is tested against its own contract. `npm run test:e2e` builds the app,
+serves it locally, and drives it in a real browser: it logs in for real
+through `/api/auth/login` (exercising `middleware.ts`/`lib/auth.ts`
+end-to-end), then mocks `/api/query` at the network layer to check that a
+query renders a summary, a map, and a stops table, and that logout redirects
+back to `/login`.
+
+Both run in CI (`.github/workflows/ci.yml`) on every push/PR, gated in order:
+build → unit tests → smoke test, so a broken build or a fast unit-test
+failure surfaces before the slower browser test ever runs.
+
 ## Known limitations / next steps
 
 - **Reverse geocoding is sequential and rate-limited to 1 req/sec** — fine
