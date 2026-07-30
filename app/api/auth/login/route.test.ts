@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
-import { verifySessionToken } from "@/lib/auth";
+import { verifySessionToken, MAX_ATTEMPTS } from "@/lib/auth";
 
 // Exercises the route against the real lib/auth implementation (already
 // unit-tested in lib/auth.test.ts) rather than mocking it — this is a thin
 // route, so the value here is end-to-end: does a correct PIN actually
 // produce a cookie that lib/auth itself accepts?
-function loginRequest(body: unknown) {
+function loginRequest(body: unknown, ip = "10.2.0.1") {
   return new NextRequest("http://localhost/api/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
     body: JSON.stringify(body),
   });
 }
@@ -50,5 +50,19 @@ describe("POST /api/auth/login", () => {
 
     const token = res.cookies.get("lt_session")?.value;
     expect(await verifySessionToken(token)).toBe(true);
+  });
+
+  it("locks out an IP with 429 after MAX_ATTEMPTS wrong PIN submissions", async () => {
+    const ip = "10.2.0.9";
+
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const res = await POST(loginRequest({ pin: "000000" }, ip));
+      expect(res.status).toBe(401);
+    }
+
+    const lockedRes = await POST(loginRequest({ pin: "000000" }, ip));
+    expect(lockedRes.status).toBe(429);
+    const body = await lockedRes.json();
+    expect(body.error).toMatch(/too many attempts/i);
   });
 });

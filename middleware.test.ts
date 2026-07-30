@@ -33,12 +33,27 @@ describe("middleware", () => {
       "/manifest.webmanifest",
       "/icon",
       "/apple-icon",
+      "/icons/512",
+      "/icons/192",
+      "/icons/maskable",
       "/sw.js",
     ];
 
     it.each(publicPaths)("passes '%s' through without a session cookie", async (path) => {
       const res = await middleware(req(path));
       expect(isPassthrough(res)).toBe(true);
+    });
+  });
+
+  describe("path matching is exact, not prefix-based", () => {
+    it("does not treat a route that merely shares a public path's prefix as public", async () => {
+      const res = await middleware(req("/icon-not-actually-public"));
+      expect(res.status).toBe(307);
+    });
+
+    it("still redirects a nested, non-whitelisted path under a public-looking prefix", async () => {
+      const res = await middleware(req("/api/healthcheck-internal"));
+      expect(res.status).toBe(401);
     });
   });
 

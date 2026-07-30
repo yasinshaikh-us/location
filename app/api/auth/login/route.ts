@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createSessionToken,
   verifyPin,
+  tooManyAttempts,
+  recordFailedAttempt,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
 } from "@/lib/auth";
@@ -10,6 +12,17 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = (req.headers.get("x-forwarded-for") || "unknown")
+      .split(",")[0]
+      .trim();
+
+    if (tooManyAttempts(ip)) {
+      return NextResponse.json(
+        { error: "Too many attempts — try again in a few minutes." },
+        { status: 429 }
+      );
+    }
+
     const { pin } = (await req.json()) as { pin?: string };
 
     if (!pin || typeof pin !== "string") {
@@ -17,6 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!verifyPin(pin)) {
+      recordFailedAttempt(ip);
       // Deliberately generic error — don't reveal whether the PIN
       // length or format was wrong vs. just incorrect.
       return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
