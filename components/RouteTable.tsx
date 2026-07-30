@@ -25,7 +25,7 @@ const columns = [
   columnHelper.accessor("place", {
     header: "Place",
     cell: (info) => (
-      <span className="font-medium text-slate-800">{info.getValue()}</span>
+      <span className="font-medium text-text">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("arrival", {
@@ -39,7 +39,7 @@ const columns = [
   columnHelper.accessor("durationMinutes", {
     header: "Duration",
     cell: (info) => (
-      <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+      <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-xs font-medium tabular-nums text-muted">
         {formatDuration(info.getValue())}
       </span>
     ),
@@ -64,17 +64,17 @@ export default function RouteTable({
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 bg-white p-8 text-center text-sm text-slate-400">
-        <MapPin size={20} className="text-slate-300" />
+      <div className="flex flex-col items-center gap-2 bg-surface p-8 text-center text-sm text-faint">
+        <MapPin size={20} className="text-faint" />
         No stops to show for this range.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto bg-white">
+    <div className="overflow-x-auto bg-surface">
       <table className="w-full min-w-[560px] text-sm">
-        <thead className="bg-slate-50 text-left">
+        <thead className="bg-surface-recessed text-left">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
@@ -82,7 +82,7 @@ export default function RouteTable({
                 return (
                   <th
                     key={header.id}
-                    className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                    className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <span className="inline-flex items-center gap-1">
@@ -109,14 +109,14 @@ export default function RouteTable({
                 onClick={() =>
                   onSelectRow(isSelected ? null : stopIndex)
                 }
-                className={`cursor-pointer border-t border-slate-100 transition hover:bg-blue-50/60 ${
-                  isSelected ? "bg-blue-50" : ""
+                className={`cursor-pointer border-t border-border-subtle transition hover:bg-accent/5 ${
+                  isSelected ? "bg-accent/10" : ""
                 }`}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="whitespace-nowrap px-3 py-2.5 text-slate-600"
+                    className="whitespace-nowrap px-3 py-2.5 text-muted"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>

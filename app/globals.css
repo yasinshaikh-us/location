@@ -2,6 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens, as RGB triplets so Tailwind's opacity modifiers
+   (bg-accent/10, border-danger/40, ...) work directly off these
+   variables. Same names/values as the scorecard app's theme.css —
+   the two apps intentionally share one design system. */
+:root {
+  --bg: 247 244 236;
+  --surface: 255 255 255;
+  --surface-recessed: 239 235 224;
+  --border: 222 218 204;
+  --border-subtle: 231 227 214;
+  --text: 27 31 36;
+  --text-muted: 91 100 112;
+  --text-faint: 138 147 160;
+  --accent: 31 122 108;
+  --accent-strong: 23 94 83;
+  --danger: 162 63 73;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 20 24 29;
+    --surface: 30 36 44;
+    --surface-recessed: 23 27 33;
+    --border: 42 49 59;
+    --border-subtle: 32 38 46;
+    --text: 237 232 222;
+    --text-muted: 139 147 160;
+    --text-faint: 90 98 112;
+    --accent: 63 167 150;
+    --accent-strong: 44 133 119;
+    --danger: 193 102 107;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: 20 24 29;
+  --surface: 30 36 44;
+  --surface-recessed: 23 27 33;
+  --border: 42 49 59;
+  --border-subtle: 32 38 46;
+  --text: 237 232 222;
+  --text-muted: 139 147 160;
+  --text-faint: 90 98 112;
+  --accent: 63 167 150;
+  --accent-strong: 44 133 119;
+  --danger: 193 102 107;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: 247 244 236;
+  --surface: 255 255 255;
+  --surface-recessed: 239 235 224;
+  --border: 222 218 204;
+  --border-subtle: 231 227 214;
+  --text: 27 31 36;
+  --text-muted: 91 100 112;
+  --text-faint: 138 147 160;
+  --accent: 31 122 108;
+  --accent-strong: 23 94 83;
+  --danger: 162 63 73;
+  color-scheme: light;
+}
+
 html,
 body {
   height: 100%;
