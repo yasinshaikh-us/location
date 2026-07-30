@@ -40,6 +40,11 @@ export default defineConfig({
       // /api/health isn't visited by the smoke test.
       SITE_PIN: "123456",
       SESSION_SECRET: "e2e-test-session-secret-not-a-real-secret",
+      // Needed at build time so MapView's client bundle has a token to read
+      // (see next.config.js). The smoke test only checks that the map
+      // container renders, so an invalid token (tile/style requests will
+      // fail) is fine.
+      MAPBOX_TOKEN: "pk.e2e-test-token-not-real",
     },
   },
 });

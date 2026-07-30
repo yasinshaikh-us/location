@@ -94,6 +94,7 @@ Fill in `.env.local`:
 | `ANTHROPIC_MODEL` | Optional, defaults to `claude-sonnet-4-6` |
 | `SITE_PIN` | Any digit string you choose — required to access the app |
 | `SESSION_SECRET` | Random string signing the session cookie. Generate with `openssl rand -hex 32` |
+| `MAPBOX_TOKEN` | A Mapbox access token — [account.mapbox.com](https://account.mapbox.com/) → Tokens |
 
 **`SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security** — it's what lets
 the server read all of `location_pings` regardless of RLS policies. It must
@@ -101,6 +102,11 @@ never be exposed to the browser. Neither it nor `SUPABASE_URL` uses the
 `NEXT_PUBLIC_` prefix — both are only ever read inside `lib/supabase.ts`,
 which is imported exclusively by server-side API routes, so neither needs
 to (or should) reach client-side JavaScript.
+
+**`MAPBOX_TOKEN` is the one exception** — `MapView.tsx` runs entirely in the
+browser, so the map needs the token client-side. Rather than renaming it to
+the usual `NEXT_PUBLIC_` convention, `next.config.js` inlines it into the
+client bundle under its original name via Next's `env` config key.
 
 ```bash
 npm run dev
@@ -130,7 +136,7 @@ to confirm env vars and DB connectivity are all green before testing queries.
    - `lib/anthropic.ts :: summarizeStops` — Claude writes a short
      natural-language summary of the period from the stop data.
 3. **`app/page.tsx`** — renders the summary, then the map (`MapView.tsx`,
-   Leaflet + OpenStreetMap tiles, no API key needed) and table
+   Mapbox GL JS, requires `MAPBOX_TOKEN`) and table
    (`RouteTable.tsx`, TanStack Table) side by side. Clicking a table row
    selects the corresponding map marker and vice versa.
 
@@ -144,7 +150,7 @@ vercel
 
 Or via the Vercel dashboard: **New Project → Import this repo**.
 
-Either way, set the same three environment variables from `.env.local` in
+Either way, set the same environment variables from `.env.local` in
 **Project Settings → Environment Variables** on Vercel — they won't be
 picked up from `.env.local` automatically since that file is gitignored.
 

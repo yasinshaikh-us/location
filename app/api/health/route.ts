@@ -14,6 +14,7 @@ export async function GET() {
     ? "set"
     : "MISSING";
   checks.SESSION_SECRET = process.env.SESSION_SECRET ? "set" : "MISSING";
+  checks.MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ? "set" : "MISSING";
 
   // Report presence only, never the PIN's value or even its length — this
   // endpoint is intentionally reachable without a session (see

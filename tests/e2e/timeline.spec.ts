@@ -91,7 +91,7 @@ test("logging in with the correct PIN, asking a question, and logging out", asyn
 
   await expect(page.getByText(FIXTURE_RESPONSE.summary)).toBeVisible();
   await expect(page.getByText("Capitol Hill", { exact: true })).toBeVisible();
-  await expect(page.locator(".leaflet-container")).toBeVisible();
+  await expect(page.locator(".mapboxgl-map")).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);

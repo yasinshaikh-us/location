@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import "./globals.css";
-import "leaflet/dist/leaflet.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
