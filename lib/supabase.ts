@@ -3,6 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 // Server-only client. Uses the service role key so it can read location_pings
 // regardless of RLS. NEVER import this file from a "use client" component.
 //
+// Neither env var below uses the NEXT_PUBLIC_ prefix — both SUPABASE_URL
+// and SUPABASE_SERVICE_ROLE_KEY are only ever read here, server-side, so
+// there's no need to expose either to the browser bundle.
+//
 // This module is the ONLY place the service-role client is created, and
 // it's intentionally kept private (not exported) — every other server
 // file goes through the read-only functions below (fetchPingsInRange,
@@ -11,13 +15,11 @@ import { createClient } from "@supabase/supabase-js";
 // upsert anywhere in this app, so the service-role key — which bypasses
 // RLS and technically *could* write — never gets the chance to.
 function getSupabaseServerClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
-    );
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars");
   }
 
   return createClient(url, key, {
