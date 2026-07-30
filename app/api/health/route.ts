@@ -9,9 +9,7 @@ export async function GET() {
   checks.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
     ? "set"
     : "MISSING";
-  checks.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-    ? "set"
-    : "MISSING";
+  checks.SUPABASE_URL = process.env.SUPABASE_URL ? "set" : "MISSING";
   checks.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
     ? "set"
     : "MISSING";

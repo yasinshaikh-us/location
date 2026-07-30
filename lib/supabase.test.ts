@@ -48,7 +48,7 @@ describe("fetchPingsInRange / checkDatabaseConnectivity", () => {
   const realEnv = { ...process.env };
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.SUPABASE_URL = "https://project.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
     mockFrom.mockReset();
     mockCreateClient.mockClear();
@@ -111,9 +111,9 @@ describe("fetchPingsInRange / checkDatabaseConnectivity", () => {
   });
 
   it("throws when required env vars are missing", async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
     await expect(fetchPingsInRange("a", "b")).rejects.toThrow(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
+      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
     );
   });
 
@@ -134,7 +134,7 @@ describe("fetchPingsInRange / checkDatabaseConnectivity", () => {
   it("catches (rather than throws) when env vars are missing", async () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     expect(await checkDatabaseConnectivity()).toBe(
-      "error: Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
+      "error: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
     );
   });
 });

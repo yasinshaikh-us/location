@@ -21,7 +21,7 @@ describe("GET /api/health", () => {
 
   it("reports every required env var as set (never the PIN's value or length)", async () => {
     process.env.ANTHROPIC_API_KEY = "x";
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.SUPABASE_URL = "https://project.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
     process.env.SESSION_SECRET = "x";
     process.env.SITE_PIN = "482196";
@@ -32,7 +32,7 @@ describe("GET /api/health", () => {
 
     expect(body.env).toEqual({
       ANTHROPIC_API_KEY: "set",
-      NEXT_PUBLIC_SUPABASE_URL: "set",
+      SUPABASE_URL: "set",
       SUPABASE_SERVICE_ROLE_KEY: "set",
       SESSION_SECRET: "set",
       SITE_PIN: "set",
@@ -43,7 +43,7 @@ describe("GET /api/health", () => {
 
   it("flags missing env vars individually", async () => {
     delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.SESSION_SECRET;
     delete process.env.SITE_PIN;
@@ -54,7 +54,7 @@ describe("GET /api/health", () => {
 
     expect(body.env).toEqual({
       ANTHROPIC_API_KEY: "MISSING",
-      NEXT_PUBLIC_SUPABASE_URL: "MISSING",
+      SUPABASE_URL: "MISSING",
       SUPABASE_SERVICE_ROLE_KEY: "MISSING",
       SESSION_SECRET: "MISSING",
       SITE_PIN: "MISSING",
