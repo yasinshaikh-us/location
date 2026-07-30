@@ -1,19 +1,18 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-// Server-only client. Uses the service role key so it can read location_pings
-// regardless of RLS. NEVER import this file from a "use client" component.
+// Server-only client. Uses the service role key, so it's reserved for
+// checkDatabaseConnectivity's row count only — never for anything that
+// returns actual row contents. NEVER import this file from a "use
+// client" component.
 //
 // Neither env var below uses the NEXT_PUBLIC_ prefix — both SUPABASE_URL
 // and SUPABASE_SERVICE_ROLE_KEY are only ever read here, server-side, so
 // there's no need to expose either to the browser bundle.
 //
-// This module is the ONLY place the service-role client is created, and
-// it's intentionally kept private (not exported) — every other server
-// file goes through the read-only functions below (fetchPingsInRange,
-// checkDatabaseConnectivity) instead of getting a raw client. Both of
-// those only ever call `.select(...)`; there is no insert/update/delete/
-// upsert anywhere in this app, so the service-role key — which bypasses
-// RLS and technically *could* write — never gets the chance to.
+// fetchPingsInRange, by contrast, takes a request-scoped client (see
+// lib/supabase-server.ts) bound to the signed-in user's session — that's
+// what makes location_pings' `auth.uid() = user_id` RLS policy actually
+// the thing doing the per-user filtering, rather than app code.
 function getSupabaseServerClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -44,19 +43,23 @@ export interface LocationPing {
  * Fetch raw pings between two ISO timestamps, ordered chronologically.
  * Capped at 20,000 rows as a safety valve against runaway date ranges.
  *
+ * Takes a request-scoped, session-bound Supabase client (from
+ * lib/supabase-server.ts) rather than creating its own — the caller's
+ * `location_pings` RLS policy (`auth.uid() = user_id`) is what actually
+ * restricts this to the signed-in user's own rows.
+ *
  * Read-only by construction: this goes through supabase-js's query
  * builder (`.select().gte().lte()...`), which sends `startIso`/`endIso`
  * as parameterized PostgREST filter values, never interpolated into a
  * raw SQL string — so there's no SQL-injection surface here regardless
- * of what the caller passes. Nothing in this function (or this module)
- * ever calls `.insert()`/`.update()`/`.delete()`/`.upsert()`/`.rpc()`.
+ * of what the caller passes. Nothing in this function ever calls
+ * `.insert()`/`.update()`/`.delete()`/`.upsert()`/`.rpc()`.
  */
 export async function fetchPingsInRange(
+  supabase: SupabaseClient,
   startIso: string,
   endIso: string
 ): Promise<LocationPing[]> {
-  const supabase = getSupabaseServerClient();
-
   const { data, error } = await supabase
     .from("location_pings")
     .select("id, tid, tst, lat, lon, alt, acc, vel, batt, conn")

@@ -19,12 +19,12 @@ describe("GET /api/health", () => {
     process.env = { ...realEnv };
   });
 
-  it("reports every required env var as set (never the PIN's value or length)", async () => {
+  it("reports every required env var as set", async () => {
     process.env.ANTHROPIC_API_KEY = "x";
     process.env.SUPABASE_URL = "https://project.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
-    process.env.SESSION_SECRET = "x";
-    process.env.SITE_PIN = "482196";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "x";
     process.env.MAPBOX_TOKEN = "x";
     mockCheckDatabaseConnectivity.mockResolvedValue("ok (12 rows)");
 
@@ -35,11 +35,10 @@ describe("GET /api/health", () => {
       ANTHROPIC_API_KEY: "set",
       SUPABASE_URL: "set",
       SUPABASE_SERVICE_ROLE_KEY: "set",
-      SESSION_SECRET: "set",
-      SITE_PIN: "set",
+      NEXT_PUBLIC_SUPABASE_URL: "set",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "set",
       MAPBOX_TOKEN: "set",
     });
-    expect(body.env.SITE_PIN).not.toContain("482196");
     expect(body.database).toBe("ok (12 rows)");
   });
 
@@ -47,8 +46,8 @@ describe("GET /api/health", () => {
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    delete process.env.SESSION_SECRET;
-    delete process.env.SITE_PIN;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     delete process.env.MAPBOX_TOKEN;
     mockCheckDatabaseConnectivity.mockResolvedValue("error: missing env vars");
 
@@ -59,18 +58,9 @@ describe("GET /api/health", () => {
       ANTHROPIC_API_KEY: "MISSING",
       SUPABASE_URL: "MISSING",
       SUPABASE_SERVICE_ROLE_KEY: "MISSING",
-      SESSION_SECRET: "MISSING",
-      SITE_PIN: "MISSING",
+      NEXT_PUBLIC_SUPABASE_URL: "MISSING",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "MISSING",
       MAPBOX_TOKEN: "MISSING",
     });
-  });
-
-  it("never reveals a length hint, even for a trailing-whitespace-corrupted PIN", async () => {
-    process.env.SITE_PIN = "482196\n";
-    mockCheckDatabaseConnectivity.mockResolvedValue("ok (0 rows)");
-
-    const res = await GET();
-    const body = await res.json();
-    expect(body.env.SITE_PIN).toBe("set");
   });
 });

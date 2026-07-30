@@ -14,6 +14,12 @@ vi.mock("@/lib/supabase", () => ({
   fetchPingsInRange: (...args: unknown[]) => mockFetchPingsInRange(...args),
 }));
 
+const FAKE_SUPABASE_CLIENT = { from: vi.fn() };
+const mockCreateServerSupabaseClient = vi.fn(() => FAKE_SUPABASE_CLIENT);
+vi.mock("@/lib/supabase-server", () => ({
+  createServerSupabaseClient: () => mockCreateServerSupabaseClient(),
+}));
+
 const mockParseDateRangeFromQuestion = vi.fn();
 const mockSummarizeStops = vi.fn();
 vi.mock("@/lib/anthropic", () => ({
@@ -122,7 +128,12 @@ describe("POST /api/query", () => {
 
     const expectedStart = pacificDayBoundsUtc("2026-07-28").startIso;
     const expectedEnd = pacificDayBoundsUtc("2026-07-28").endIso;
-    expect(mockFetchPingsInRange).toHaveBeenCalledWith(expectedStart, expectedEnd);
+    expect(mockFetchPingsInRange).toHaveBeenCalledWith(FAKE_SUPABASE_CLIENT, expectedStart, expectedEnd);
+  });
+
+  it("queries through a session-bound Supabase client, not a fresh one per call", async () => {
+    await POST(queryRequest({ question: "where was I yesterday" }));
+    expect(mockCreateServerSupabaseClient).toHaveBeenCalled();
   });
 
   it("reverse-geocodes when there's between 1 and 15 stops", async () => {

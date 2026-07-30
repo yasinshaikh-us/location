@@ -1,10 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // One thin end-to-end smoke test (tier 3 of the test suite) — everything
-// else is Vitest unit tests. Runs against a built+started copy of the app
-// with /api/query mocked at the network layer, so it needs no real
-// Anthropic/Supabase credentials — only a PIN + session secret so the
-// real login flow (middleware.ts, lib/auth.ts) can be exercised for real.
+// else is Vitest unit tests. Only covers the logged-out gate (redirect to
+// /login, the Google sign-in button, /api/query 401ing) — the real Google
+// OAuth flow needs a live Google account and can't be driven headlessly
+// with credentials this repo controls (see tests/e2e/timeline.spec.ts).
 const E2E_PORT = 4173;
 
 export default defineConfig({
@@ -35,15 +35,16 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      // Real login flow needs these two; nothing else is ever reached
-      // for real since /api/query is mocked at the network layer and
-      // /api/health isn't visited by the smoke test.
-      SITE_PIN: "123456",
-      SESSION_SECRET: "e2e-test-session-secret-not-a-real-secret",
+      // middleware.ts needs a syntactically valid Supabase URL/key to
+      // construct its client; since there's never a session cookie in
+      // this smoke test, auth.getUser() resolves to no-user locally
+      // without an actual network round-trip, so these values never need
+      // to be real.
+      NEXT_PUBLIC_SUPABASE_URL: "https://e2e-test-project.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "e2e-test-anon-key-not-real",
       // Needed at build time so MapView's client bundle has a token to read
-      // (see next.config.js). The smoke test only checks that the map
-      // container renders, so an invalid token (tile/style requests will
-      // fail) is fine.
+      // (see next.config.js). The smoke test never reaches the map, so an
+      // invalid token is fine.
       MAPBOX_TOKEN: "pk.e2e-test-token-not-real",
     },
   },

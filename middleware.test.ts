@@ -1,12 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { middleware } from "./middleware";
-import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
 
-function req(path: string, cookie?: string) {
-  return new NextRequest(`http://x.test${path}`, {
-    headers: cookie ? { cookie } : {},
-  });
+const mockGetUser = vi.fn();
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: () => ({
+    auth: { getUser: mockGetUser },
+  }),
+}));
+
+import { middleware } from "./middleware";
+
+function req(path: string) {
+  return new NextRequest(`http://x.test${path}`);
 }
 
 function isPassthrough(res: Awaited<ReturnType<typeof middleware>>) {
@@ -16,19 +21,16 @@ function isPassthrough(res: Awaited<ReturnType<typeof middleware>>) {
 }
 
 describe("middleware", () => {
-  const realEnv = { ...process.env };
-
   beforeEach(() => {
-    process.env.SESSION_SECRET = "test-session-secret";
-  });
-  afterEach(() => {
-    process.env = { ...realEnv };
+    mockGetUser.mockReset();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
   });
 
   describe("public paths", () => {
     const publicPaths = [
       "/login",
-      "/api/auth/login",
+      "/auth/callback",
       "/api/health",
       "/manifest.webmanifest",
       "/icon",
@@ -39,7 +41,8 @@ describe("middleware", () => {
       "/sw.js",
     ];
 
-    it.each(publicPaths)("passes '%s' through without a session cookie", async (path) => {
+    it.each(publicPaths)("passes '%s' through without a signed-in user", async (path) => {
+      mockGetUser.mockResolvedValue({ data: { user: null } });
       const res = await middleware(req(path));
       expect(isPassthrough(res)).toBe(true);
     });
@@ -47,17 +50,23 @@ describe("middleware", () => {
 
   describe("path matching is exact, not prefix-based", () => {
     it("does not treat a route that merely shares a public path's prefix as public", async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } });
       const res = await middleware(req("/icon-not-actually-public"));
       expect(res.status).toBe(307);
     });
 
     it("still redirects a nested, non-whitelisted path under a public-looking prefix", async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } });
       const res = await middleware(req("/api/healthcheck-internal"));
       expect(res.status).toBe(401);
     });
   });
 
-  describe("without a valid session", () => {
+  describe("without a signed-in user", () => {
+    beforeEach(() => {
+      mockGetUser.mockResolvedValue({ data: { user: null } });
+    });
+
     it("redirects a page request to /login", async () => {
       const res = await middleware(req("/"));
       expect(res.status).toBe(307);
@@ -70,39 +79,20 @@ describe("middleware", () => {
       const body = await res.json();
       expect(body).toEqual({ error: "Unauthorized" });
     });
-
-    it("rejects a malformed cookie the same way as a missing one", async () => {
-      const res = await middleware(req("/", `${SESSION_COOKIE_NAME}=garbage`));
-      expect(res.status).toBe(307);
-    });
-
-    it("rejects an expired token even if otherwise well-formed", async () => {
-      const expiry = Date.now() - 1000;
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode("test-session-secret"),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"]
-      );
-      const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(String(expiry)));
-      const mac = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      const res = await middleware(req("/", `${SESSION_COOKIE_NAME}=${expiry}.${mac}`));
-      expect(res.status).toBe(307);
-    });
   });
 
-  describe("with a valid session", () => {
+  describe("with a signed-in user", () => {
+    beforeEach(() => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    });
+
     it("passes a page request through", async () => {
-      const token = await createSessionToken();
-      const res = await middleware(req("/", `${SESSION_COOKIE_NAME}=${token}`));
+      const res = await middleware(req("/"));
       expect(isPassthrough(res)).toBe(true);
     });
 
     it("passes an API request through", async () => {
-      const token = await createSessionToken();
-      const res = await middleware(req("/api/query", `${SESSION_COOKIE_NAME}=${token}`));
+      const res = await middleware(req("/api/query"));
       expect(isPassthrough(res)).toBe(true);
     });
   });

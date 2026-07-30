@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchPingsInRange } from "@/lib/supabase";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { parseDateRangeFromQuestion, summarizeStops } from "@/lib/anthropic";
 import {
   clusterIntoStops,
@@ -71,8 +72,11 @@ export async function POST(
     const startIso = pacificDayBoundsUtc(start).startIso;
     const endIso = pacificDayBoundsUtc(end).endIso;
 
-    // 2. Pull raw pings from Supabase/PostGIS for that range.
-    const pings = await fetchPingsInRange(startIso, endIso);
+    // 2. Pull raw pings from Supabase/PostGIS for that range. Uses a
+    //    session-bound client, not the service-role key — RLS restricts
+    //    this to the signed-in user's own rows.
+    const supabase = createServerSupabaseClient();
+    const pings = await fetchPingsInRange(supabase, startIso, endIso);
 
     // 3. Cluster into stops + simplify the in-transit polyline.
     const { stops: rawStops, route: rawRoute } = clusterIntoStops(pings);

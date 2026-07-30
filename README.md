@@ -92,9 +92,15 @@ Fill in `.env.local`:
 | `SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → `service_role` secret key |
 | `ANTHROPIC_MODEL` | Optional, defaults to `claude-sonnet-4-6` |
-| `SITE_PIN` | Any digit string you choose — required to access the app |
-| `SESSION_SECRET` | Random string signing the session cookie. Generate with `openssl rand -hex 32` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Same as `SUPABASE_URL` above — exposed to the browser so it can start the Google sign-in redirect |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API → `anon`/publishable key |
 | `MAPBOX_TOKEN` | A Mapbox access token — [account.mapbox.com](https://account.mapbox.com/) → Tokens |
+
+Google also needs to be enabled as a sign-in provider on the Supabase project
+itself (Authentication → Providers → Google, with a Client ID/Secret from a
+Google Cloud OAuth client whose authorized redirect URI is
+`<SUPABASE_URL>/auth/v1/callback`) — that's a one-time dashboard step, not
+something in this repo's env vars.
 
 **`SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security** — it's what lets
 the server read all of `location_pings` regardless of RLS policies. It must
@@ -157,32 +163,35 @@ picked up from `.env.local` automatically since that file is gitignored.
 After deploying, hit `https://<your-app>.vercel.app/api/health` to confirm
 the deployed environment can reach Supabase before testing real queries.
 
-## Access control (PIN gate)
+## Access control (Google sign-in + per-user RLS)
 
 Since this app exposes real location history over a public URL, every route —
-pages *and* API endpoints — is gated behind a 6-digit PIN, enforced in
-`middleware.ts`:
+pages *and* API endpoints — is gated behind a signed-in Supabase Auth session,
+enforced in `middleware.ts`:
 
-- `/login` — PIN entry screen, the only page reachable without a session
-- `/api/auth/login` — the only API route reachable without a session;
-  rate-limited per IP, verifies the PIN against `SITE_PIN`, and issues a
-  signed, `httpOnly` session cookie valid for 30 days
+- `/login` — the sign-in screen ("Continue with Google"), the only page
+  reachable without a session
+- `/auth/callback` — where Google redirects back to after consent; exchanges
+  the OAuth code for a session and sets the auth cookies
 - `/api/health` — also reachable without a session (so a broken login is
-  still diagnosable), but only ever reports whether each secret is `set`
-  or `MISSING` — never a value, and not even a PIN length, since that
-  would shrink the search space for the rate limiter above
+  still diagnosable), and only ever reports whether each env var is `set`
+  or `MISSING`, never a value
 - Everything else — any other page, and critically `/api/query` itself —
-  returns a redirect (pages) or a 401 (API calls) without a valid cookie
+  returns a redirect (pages) or a 401 (API calls) without a valid session
 
-This matters because a PIN check done only in the browser wouldn't actually
+This matters because a check done only in the browser wouldn't actually
 protect anything — someone could call `/api/query` directly and bypass a
 UI-only gate entirely. The middleware runs server-side on every request
 before your code does, so there's no path around it.
 
-The session token is a signed `expiry.hmac` pair (`lib/auth.ts`), verified
-with the Web Crypto API rather than Node's `crypto` module, because
-Next.js middleware runs on Vercel's Edge runtime, which doesn't have
-Node's `crypto` available.
+Anyone with a Google account can sign in — access to *data* is what's
+actually restricted, not the ability to create an account. `location_pings`
+has a `user_id` column and an `auth.uid() = user_id` Row Level Security
+policy, so `lib/supabase.ts :: fetchPingsInRange` runs through a
+session-bound Supabase client (`lib/supabase-server.ts`, using the
+`anon` key, not the service-role key) — Postgres itself restricts every
+query to the signed-in user's own rows. A new sign-in starts with zero
+rows until pings are written with their `user_id`.
 
 ## Timeline scrubber
 

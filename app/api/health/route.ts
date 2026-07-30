@@ -13,15 +13,13 @@ export async function GET() {
   checks.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
     ? "set"
     : "MISSING";
-  checks.SESSION_SECRET = process.env.SESSION_SECRET ? "set" : "MISSING";
+  checks.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? "set"
+    : "MISSING";
+  checks.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ? "set"
+    : "MISSING";
   checks.MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ? "set" : "MISSING";
-
-  // Report presence only, never the PIN's value or even its length — this
-  // endpoint is intentionally reachable without a session (see
-  // middleware.ts), and login attempts are now rate-limited, so leaking
-  // the PIN's length here would hand an unauthenticated caller a smaller
-  // brute-force search space for free.
-  checks.SITE_PIN = process.env.SITE_PIN ? "set" : "MISSING";
 
   const dbStatus = await checkDatabaseConnectivity();
 
