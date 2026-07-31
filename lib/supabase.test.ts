@@ -44,37 +44,17 @@ vi.mock("@supabase/supabase-js", () => ({
 
 import { fetchPingsInRange, checkDatabaseConnectivity } from "./supabase";
 
-describe("fetchPingsInRange / checkDatabaseConnectivity", () => {
-  const realEnv = { ...process.env };
-
+describe("fetchPingsInRange", () => {
   beforeEach(() => {
-    process.env.SUPABASE_URL = "https://project.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
     mockFrom.mockReset();
-    mockCreateClient.mockClear();
-  });
-  afterEach(() => {
-    process.env = { ...realEnv };
   });
 
-  it("creates the client with the service-role key and persistSession disabled", async () => {
-    const { builder } = makeQueryBuilder({ data: [], error: null });
-    mockFrom.mockReturnValue(builder);
-
-    await fetchPingsInRange("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
-
-    expect(mockCreateClient).toHaveBeenCalledWith(
-      "https://project.supabase.co",
-      "test-service-role-key",
-      { auth: { persistSession: false } }
-    );
-  });
-
-  it("queries location_pings with the requested range, ascending order, and the 20k safety cap", async () => {
+  it("queries location_pings with the requested range, ascending order, and the 20k safety cap, using the client it's given", async () => {
     const { builder, calls } = makeQueryBuilder({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
+    const fakeClient = { from: mockFrom } as never;
 
-    await fetchPingsInRange("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+    await fetchPingsInRange(fakeClient, "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
 
     expect(mockFrom).toHaveBeenCalledWith("location_pings");
     expect(calls.select[0]).toBe("id, tid, tst, lat, lon, alt, acc, vel, batt, conn");
@@ -88,32 +68,55 @@ describe("fetchPingsInRange / checkDatabaseConnectivity", () => {
     const rows = [{ id: 1, tid: "t1", tst: "2026-01-01T00:00:00Z", lat: 47.6, lon: -122.3 }];
     const { builder } = makeQueryBuilder({ data: rows, error: null });
     mockFrom.mockReturnValue(builder);
+    const fakeClient = { from: mockFrom } as never;
 
-    const result = await fetchPingsInRange("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+    const result = await fetchPingsInRange(fakeClient, "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
     expect(result).toEqual(rows);
   });
 
   it("returns an empty array when data is null", async () => {
     const { builder } = makeQueryBuilder({ data: null, error: null });
     mockFrom.mockReturnValue(builder);
+    const fakeClient = { from: mockFrom } as never;
 
-    const result = await fetchPingsInRange("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+    const result = await fetchPingsInRange(fakeClient, "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
     expect(result).toEqual([]);
   });
 
   it("throws with the Supabase error message on query failure", async () => {
     const { builder } = makeQueryBuilder({ data: null, error: { message: "connection refused" } });
     mockFrom.mockReturnValue(builder);
+    const fakeClient = { from: mockFrom } as never;
 
     await expect(
-      fetchPingsInRange("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
+      fetchPingsInRange(fakeClient, "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
     ).rejects.toThrow("Supabase query failed: connection refused");
   });
+});
 
-  it("throws when required env vars are missing", async () => {
-    delete process.env.SUPABASE_URL;
-    await expect(fetchPingsInRange("a", "b")).rejects.toThrow(
-      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
+describe("checkDatabaseConnectivity", () => {
+  const realEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.SUPABASE_URL = "https://project.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+    mockFrom.mockReset();
+    mockCreateClient.mockClear();
+  });
+  afterEach(() => {
+    process.env = { ...realEnv };
+  });
+
+  it("creates the client with the service-role key and persistSession disabled", async () => {
+    const { builder } = makeQueryBuilder({ count: 0, error: null });
+    mockFrom.mockReturnValue(builder);
+
+    await checkDatabaseConnectivity();
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      "https://project.supabase.co",
+      "test-service-role-key",
+      { auth: { persistSession: false } }
     );
   });
 
