@@ -89,29 +89,28 @@ Fill in `.env.local`:
 | Variable | Where to find it |
 |---|---|
 | `ANTHROPIC_API_KEY` | Your existing Anthropic API key |
-| `SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → `service_role` secret key |
 | `ANTHROPIC_MODEL` | Optional, defaults to `claude-sonnet-4-6` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Same as `SUPABASE_URL` above — exposed to the browser so it can start the Google sign-in redirect |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API → `anon`/publishable key |
 | `MAPBOX_TOKEN` | A Mapbox access token — [account.mapbox.com](https://account.mapbox.com/) → Tokens |
 
 Google also needs to be enabled as a sign-in provider on the Supabase project
 itself (Authentication → Providers → Google, with a Client ID/Secret from a
 Google Cloud OAuth client whose authorized redirect URI is
-`<SUPABASE_URL>/auth/v1/callback`) — that's a one-time dashboard step, not
-something in this repo's env vars.
+`<NEXT_PUBLIC_SUPABASE_URL>/auth/v1/callback`) — that's a one-time dashboard
+step, not something in this repo's env vars.
 
-**`SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security** — it's what lets
-the server read all of `location_pings` regardless of RLS policies. It must
-never be exposed to the browser. Neither it nor `SUPABASE_URL` uses the
-`NEXT_PUBLIC_` prefix — both are only ever read inside `lib/supabase.ts`,
-which is imported exclusively by server-side API routes, so neither needs
-to (or should) reach client-side JavaScript.
+There is no service-role key anywhere in this app. Every Supabase query goes
+through a request-scoped client bound to the signed-in user's own session
+(`lib/supabase-server.ts`), so `location_pings`' `auth.uid() = user_id` RLS
+policy is what restricts each request — nothing here needs, or should have,
+elevated access. `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY` are safe to expose to
+the browser by design, which is why they're the only Supabase vars this app
+needs.
 
-**`MAPBOX_TOKEN` is the one exception** — `MapView.tsx` runs entirely in the
-browser, so the map needs the token client-side. Rather than renaming it to
-the usual `NEXT_PUBLIC_` convention, `next.config.js` inlines it into the
+**`MAPBOX_TOKEN` is the one exception to the `NEXT_PUBLIC_` convention** —
+`MapView.tsx` runs entirely in the browser, so the map needs the token
+client-side. Rather than renaming it, `next.config.js` inlines it into the
 client bundle under its original name via Next's `env` config key.
 
 ```bash
@@ -119,7 +118,7 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`. Try `http://localhost:3000/api/health` first
-to confirm env vars and DB connectivity are all green before testing queries.
+to confirm env vars are all green before testing queries.
 
 ## How a query flows through the app
 
@@ -161,7 +160,8 @@ Either way, set the same environment variables from `.env.local` in
 picked up from `.env.local` automatically since that file is gitignored.
 
 After deploying, hit `https://<your-app>.vercel.app/api/health` to confirm
-the deployed environment can reach Supabase before testing real queries.
+the deployed environment has every required env var set before testing
+real queries.
 
 ## Access control (Google sign-in + per-user RLS)
 
