@@ -7,6 +7,6 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "**/.next/**", "**/tests/e2e/**"],
+    exclude: ["**/node_modules/**", "**/.next/**", "**/tests/e2e/**", "**/tests/synthetic/**"],
   },
 });
