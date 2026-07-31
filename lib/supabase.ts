@@ -1,30 +1,11 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Server-only client. Uses the service role key, so it's reserved for
-// checkDatabaseConnectivity's row count only — never for anything that
-// returns actual row contents. NEVER import this file from a "use
-// client" component.
-//
-// Neither env var below uses the NEXT_PUBLIC_ prefix — both SUPABASE_URL
-// and SUPABASE_SERVICE_ROLE_KEY are only ever read here, server-side, so
-// there's no need to expose either to the browser bundle.
-//
-// fetchPingsInRange, by contrast, takes a request-scoped client (see
+// fetchPingsInRange takes a request-scoped client (see
 // lib/supabase-server.ts) bound to the signed-in user's session — that's
 // what makes location_pings' `auth.uid() = user_id` RLS policy actually
-// the thing doing the per-user filtering, rather than app code.
-function getSupabaseServerClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !key) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars");
-  }
-
-  return createClient(url, key, {
-    auth: { persistSession: false },
-  });
-}
+// the thing doing the per-user filtering, rather than app code. This
+// module deliberately has no service-role client: there is nothing here
+// that needs to bypass RLS.
 
 export interface LocationPing {
   id: number;
@@ -73,21 +54,4 @@ export async function fetchPingsInRange(
   }
 
   return data ?? [];
-}
-
-/**
- * Read-only connectivity check used by /api/health — counts rows
- * without returning any of their contents. Kept in this module so the
- * service-role client never has to be handed to another file.
- */
-export async function checkDatabaseConnectivity(): Promise<string> {
-  try {
-    const supabase = getSupabaseServerClient();
-    const { count, error } = await supabase
-      .from("location_pings")
-      .select("*", { count: "exact", head: true });
-    return error ? `error: ${error.message}` : `ok (${count} rows)`;
-  } catch (e) {
-    return `error: ${e instanceof Error ? e.message : "unknown"}`;
-  }
 }
