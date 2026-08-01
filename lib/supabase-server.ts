@@ -9,8 +9,8 @@ import { cookies } from "next/headers";
 // the service-role key: unlike the health-check-only client in
 // lib/supabase.ts, anything built on this client is meant to only ever
 // see the calling user's own rows.
-export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
