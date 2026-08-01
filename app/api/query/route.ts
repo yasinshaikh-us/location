@@ -134,6 +134,8 @@ export async function POST(
       place: s.placeName ?? `${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}`,
       arrival: s.arrival,
       departure: s.departure,
+      arrivalKnown: s.arrivalKnown,
+      departureKnown: s.departureKnown,
       durationMinutes: s.durationMinutes,
       lat: s.lat,
       lon: s.lon,

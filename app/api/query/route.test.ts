@@ -67,6 +67,8 @@ const STOP: Stop = {
   durationMinutes: 20,
   pingCount: 3,
   placeName: "Capitol Hill",
+  arrivalKnown: true,
+  departureKnown: false,
 };
 
 const ROUTE_POINT: RoutePoint = { lat: 47.6, lon: -122.3, tst: "2026-07-28T15:00:00Z" };
@@ -193,6 +195,8 @@ describe("POST /api/query", () => {
         place: "Capitol Hill",
         arrival: STOP.arrival,
         departure: STOP.departure,
+        arrivalKnown: STOP.arrivalKnown,
+        departureKnown: STOP.departureKnown,
         durationMinutes: STOP.durationMinutes,
         lat: STOP.lat,
         lon: STOP.lon,

@@ -35,6 +35,11 @@ export interface TableRow {
   place: string;
   arrival: string;
   departure: string;
+  // See Stop.arrivalKnown/departureKnown -- false means `arrival`/
+  // `departure` just reflects where the query window starts/ends, not
+  // an actual observed arrival or departure.
+  arrivalKnown: boolean;
+  departureKnown: boolean;
   durationMinutes: number;
   lat: number;
   lon: number;

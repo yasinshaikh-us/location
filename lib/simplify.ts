@@ -8,6 +8,13 @@ export interface Stop {
   durationMinutes: number;
   pingCount: number;
   placeName?: string;
+  // False when this stop's cluster starts at the very first queried ping
+  // (arrivalKnown) or ends at the very last one (departureKnown) -- i.e.
+  // there's no ping in the queried range showing actual movement into or
+  // out of it, so `arrival`/`departure` just reflect where the query
+  // window happens to start/end, not a real arrival or departure event.
+  arrivalKnown: boolean;
+  departureKnown: boolean;
 }
 
 export interface RoutePoint {
@@ -92,6 +99,12 @@ export function clusterIntoStops(pings: LocationPing[]): {
         departure,
         durationMinutes: Math.round(durationMinutes),
         pingCount: clusterPings.length,
+        // clusterStart === 0 only for the very first cluster processed,
+        // and isLast only for the very last -- so these single checks
+        // are enough to flag a stop that runs off either edge of the
+        // queried pings, with no observed arrival/departure in range.
+        arrivalKnown: clusterStart !== 0,
+        departureKnown: !isLast,
       });
     }
 
