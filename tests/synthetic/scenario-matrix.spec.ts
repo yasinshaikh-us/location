@@ -151,8 +151,12 @@ test.describe("expanded location scenario matrix", () => {
   });
 
   test("'7 months ago' resolves to the correct calendar date (API)", async ({ browser }) => {
+    // No day-of-month override here (unlike the far-back-date test below,
+    // which states its date explicitly in the question): a bare "N months
+    // ago" naturally resolves to today's day-of-month N months back, so the
+    // fixture must land on that same day or the app's (correct) answer
+    // reads as a false-positive mismatch.
     const target = monthsAgo(7);
-    target.setUTCDate(10); // fixed day-of-month, avoids month-length edge cases
     await insertPings(session, stopPings(target));
 
     const cookies = await sessionToCookies(session);
