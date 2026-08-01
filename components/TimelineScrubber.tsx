@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import type { Stop } from "@/lib/simplify";
 import { formatTime } from "@/lib/format";
+import { advanceReplayClock } from "@/lib/replayClock";
 
 interface TimelineScrubberProps {
   startMs: number;
@@ -14,12 +15,6 @@ interface TimelineScrubberProps {
   /** Starts playback automatically on mount. Defaults to true. */
   autoPlay?: boolean;
 }
-
-// Sim-time advances this fast per real second while actually in transit...
-const MOVING_MS_PER_SEC = 1000 * 60 * 6;
-// ...and this many times faster while parked at a stop, so replay doesn't
-// crawl through hours spent sitting still.
-const STOPPED_SPEED_MULTIPLIER = 18;
 
 export default function TimelineScrubber({
   startMs,
@@ -50,24 +45,13 @@ export default function TimelineScrubber({
       return;
     }
 
-    function isStoppedAt(ms: number) {
-      return stops.some((s) => {
-        const arrival = new Date(s.arrival).getTime();
-        const departure = new Date(s.departure).getTime();
-        return ms >= arrival && ms <= departure;
-      });
-    }
-
     function tick(now: number) {
       if (lastFrameRef.current == null) lastFrameRef.current = now;
       const deltaSec = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
 
-      const speed = isStoppedAt(simMsRef.current)
-        ? MOVING_MS_PER_SEC * STOPPED_SPEED_MULTIPLIER
-        : MOVING_MS_PER_SEC;
+      const next = advanceReplayClock(simMsRef.current, deltaSec, stops, endMs);
 
-      const next = simMsRef.current + deltaSec * speed;
       if (next >= endMs) {
         simMsRef.current = endMs;
         onScrub(endMs);
