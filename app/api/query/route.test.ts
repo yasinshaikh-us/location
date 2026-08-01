@@ -5,13 +5,14 @@ import type { Stop, RoutePoint } from "@/lib/simplify";
 import { pacificDayBoundsUtc } from "@/lib/format";
 
 // The query route is a pure orchestrator over lib/supabase, lib/anthropic,
-// and lib/simplify — each already has its own unit tests, so here we mock
-// all three at the module boundary and test only this route's own logic:
-// guard clauses, and how the pieces get assembled into the response body /
-// GeoJSON. The reverse-geocode distinct-location skip rule now lives
-// inside lib/simplify.ts's reverseGeocodeStops itself (see
-// lib/simplify.test.ts) — this route just always calls it when there's at
-// least one stop.
+// lib/simplify, and lib/geocode — each already has its own unit tests, so
+// here we mock all of them at the module boundary and test only this
+// route's own logic: guard clauses, and how the pieces get assembled into
+// the response body / GeoJSON. Both the reverse-geocode distinct-location
+// skip rule and the shared-cache lookup/write now live inside
+// lib/geocode.ts's reverseGeocodeStops itself (see lib/geocode.test.ts) —
+// this route just always calls it, passing through its own Supabase
+// client.
 const mockFetchPingsInRange = vi.fn();
 vi.mock("@/lib/supabase", () => ({
   fetchPingsInRange: (...args: unknown[]) => mockFetchPingsInRange(...args),
@@ -32,10 +33,13 @@ vi.mock("@/lib/anthropic", () => ({
 
 const mockClusterIntoStops = vi.fn();
 const mockSimplifyRoute = vi.fn();
-const mockReverseGeocodeStops = vi.fn();
 vi.mock("@/lib/simplify", () => ({
   clusterIntoStops: (...args: unknown[]) => mockClusterIntoStops(...args),
   simplifyRoute: (...args: unknown[]) => mockSimplifyRoute(...args),
+}));
+
+const mockReverseGeocodeStops = vi.fn();
+vi.mock("@/lib/geocode", () => ({
   reverseGeocodeStops: (...args: unknown[]) => mockReverseGeocodeStops(...args),
 }));
 
@@ -82,7 +86,9 @@ describe("POST /api/query", () => {
     mockFetchPingsInRange.mockResolvedValue([PING]);
     mockClusterIntoStops.mockReturnValue({ stops: [STOP], route: [ROUTE_POINT] });
     mockSimplifyRoute.mockReturnValue([ROUTE_POINT]);
-    mockReverseGeocodeStops.mockImplementation(async (stops: Stop[]) => stops);
+    mockReverseGeocodeStops.mockImplementation(
+      async (_supabase: unknown, stops: Stop[]) => stops
+    );
     mockSummarizeStops.mockResolvedValue("You were at Capitol Hill.");
     mockParseDateRangeFromQuestion.mockResolvedValue({
       isLocationQuery: true,
@@ -141,9 +147,9 @@ describe("POST /api/query", () => {
     expect(mockCreateServerSupabaseClient).toHaveBeenCalled();
   });
 
-  it("reverse-geocodes when there's at least one stop", async () => {
+  it("reverse-geocodes with the route's own Supabase client when there's at least one stop", async () => {
     await POST(queryRequest({ question: "where was I yesterday" }));
-    expect(mockReverseGeocodeStops).toHaveBeenCalledWith([STOP]);
+    expect(mockReverseGeocodeStops).toHaveBeenCalledWith(FAKE_SUPABASE_CLIENT, [STOP]);
   });
 
   it("still calls reverseGeocodeStops with many stops -- the distinct-location skip decision lives inside that function now, not here", async () => {
@@ -151,17 +157,17 @@ describe("POST /api/query", () => {
     mockClusterIntoStops.mockReturnValue({ stops: manyStops, route: [ROUTE_POINT] });
 
     const res = await POST(queryRequest({ question: "where was I over the last month" }));
-    expect(mockReverseGeocodeStops).toHaveBeenCalledWith(manyStops);
+    expect(mockReverseGeocodeStops).toHaveBeenCalledWith(FAKE_SUPABASE_CLIENT, manyStops);
     const body = await res.json();
     expect(body.stops).toHaveLength(16);
   });
 
-  it("skips reverse geocoding when there are zero stops, and uses the no-data summary", async () => {
+  it("uses the no-data summary when there are zero stops", async () => {
     mockClusterIntoStops.mockReturnValue({ stops: [], route: [] });
     mockSimplifyRoute.mockReturnValue([]);
 
     const res = await POST(queryRequest({ question: "where was I yesterday" }));
-    expect(mockReverseGeocodeStops).not.toHaveBeenCalled();
+    expect(mockReverseGeocodeStops).toHaveBeenCalledWith(FAKE_SUPABASE_CLIENT, []);
     const body = await res.json();
     expect(body.summary).toBe("No location data was recorded on 2026-07-28.");
   });
@@ -238,8 +244,9 @@ describe("POST /api/query", () => {
   });
 
   it("labels a stop with no place name using its coordinates in the table row", async () => {
-    mockReverseGeocodeStops.mockImplementation(async (stops: Stop[]) =>
-      stops.map((s) => ({ ...s, placeName: undefined }))
+    mockReverseGeocodeStops.mockImplementation(
+      async (_supabase: unknown, stops: Stop[]) =>
+        stops.map((s) => ({ ...s, placeName: undefined }))
     );
     const res = await POST(queryRequest({ question: "where was I yesterday" }));
     const body = await res.json();
