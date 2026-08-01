@@ -51,7 +51,7 @@ export async function POST(
       return NextResponse.json({ error: OFF_TOPIC_MESSAGE }, { status: 400 });
     }
 
-    const { start, end, reasoning } = parsed;
+    const { start, end } = parsed;
 
     // Defense in depth: even though this came from our own prompt
     // contract rather than raw user input, never let anything but a
@@ -144,9 +144,9 @@ export async function POST(
       dateRange: { start, end },
       summary:
         stops.length === 0
-          ? `No location data was recorded between ${start} and ${end}.${
-              reasoning ? ` (${reasoning})` : ""
-            }`
+          ? start === end
+            ? `No location data was recorded on ${start}.`
+            : `No location data was recorded between ${start} and ${end}.`
           : summary,
       stops,
       route: simplifiedRoute,
