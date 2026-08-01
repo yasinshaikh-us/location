@@ -66,8 +66,11 @@ test.describe("direct Supabase cross-check", () => {
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.tableRows.length, "fixture pings should produce exactly one stop").toBeGreaterThan(0);
-    expect(body.tableRows[0].arrival).toBe(arrival.toISOString());
-    expect(body.tableRows[0].departure).toBe(departure.toISOString());
+    // Compare as instants, not strings — Postgres/PostgREST renders
+    // timestamptz as "...+00:00" while Date#toISOString() uses "...Z";
+    // both represent the same moment.
+    expect(new Date(body.tableRows[0].arrival).getTime()).toBe(arrival.getTime());
+    expect(new Date(body.tableRows[0].departure).getTime()).toBe(departure.getTime());
     await context.close();
   });
 });

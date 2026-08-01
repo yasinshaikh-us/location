@@ -33,6 +33,7 @@ function humanDateLabel(d: Date): string {
     timeZone: "America/Los_Angeles",
     month: "long",
     day: "numeric",
+    year: "numeric",
   });
 }
 
