@@ -82,12 +82,13 @@ export async function POST(
     const { stops: rawStops, route: rawRoute } = clusterIntoStops(pings);
     const simplifiedRoute = simplifyRoute(rawRoute, 15);
 
-    // 4. Reverse-geocode stops into place names (skip if too many, to
-    //    stay within Nominatim's free-tier rate limit and request time).
+    // 4. Reverse-geocode stops into place names. reverseGeocodeStops
+    //    dedupes repeat visits to the same place and skips entirely if
+    //    there are too many distinct locations to fit its rate/time
+    //    budget, so no stop-count check is needed here beyond the trivial
+    //    empty-array case.
     const stops =
-      rawStops.length > 0 && rawStops.length <= 15
-        ? await reverseGeocodeStops(rawStops)
-        : rawStops;
+      rawStops.length > 0 ? await reverseGeocodeStops(rawStops) : rawStops;
 
     // 5. Ask Claude for a short natural-language summary of the period.
     const summary = await summarizeStops(question, stops, { start, end });

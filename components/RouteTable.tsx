@@ -8,15 +8,19 @@ import {
   flexRender,
   type SortingState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, MapPin } from "lucide-react";
 import type { TableRow } from "@/lib/types";
-import { formatDateTime, formatDuration } from "@/lib/format";
+import { formatDateTime, formatDuration, formatTime } from "@/lib/format";
 
 interface RouteTableProps {
   rows: TableRow[];
   selectedIndex: number | null;
   onSelectRow: (index: number | null) => void;
+  // Whether every row falls on the same calendar day -- the page's own
+  // date-range badge already shows the date in that case, so Arrived/
+  // Departed can show just the time instead of repeating it per row.
+  singleDay: boolean;
 }
 
 const columnHelper = createColumnHelper<TableRow>();
@@ -32,52 +36,60 @@ const COLUMN_WIDTHS: Record<string, string> = {
   durationMinutes: "15%",
 };
 
-const columns = [
-  columnHelper.accessor("place", {
-    header: "Place",
-    cell: (info) => (
-      <span className="font-medium text-text">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("arrival", {
-    header: "Arrived",
-    // Unknown means this stop already covered the very start of the
-    // queried range -- there's no ping showing them actually arriving,
-    // just where the data happens to begin.
-    cell: (info) =>
-      info.row.original.arrivalKnown ? (
-        formatDateTime(info.getValue())
-      ) : (
-        <span className="text-faint">—</span>
-      ),
-  }),
-  columnHelper.accessor("departure", {
-    header: "Departed",
-    // Unknown means this stop still covers the very end of the queried
-    // range -- there's no ping showing them actually leaving.
-    cell: (info) =>
-      info.row.original.departureKnown ? (
-        formatDateTime(info.getValue())
-      ) : (
-        <span className="text-faint">—</span>
-      ),
-  }),
-  columnHelper.accessor("durationMinutes", {
-    header: "Duration",
-    cell: (info) => (
-      <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted">
-        {formatDuration(info.getValue())}
-      </span>
-    ),
-  }),
-];
-
 export default function RouteTable({
   rows,
   selectedIndex,
   onSelectRow,
+  singleDay,
 }: RouteTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("place", {
+        header: "Place",
+        cell: (info) => (
+          <span className="font-medium text-text">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor("arrival", {
+        header: "Arrived",
+        // Unknown means this stop already covered the very start of the
+        // queried range -- there's no ping showing them actually
+        // arriving, just where the data happens to begin.
+        cell: (info) =>
+          !info.row.original.arrivalKnown ? (
+            <span className="text-faint">—</span>
+          ) : singleDay ? (
+            formatTime(info.getValue())
+          ) : (
+            formatDateTime(info.getValue())
+          ),
+      }),
+      columnHelper.accessor("departure", {
+        header: "Departed",
+        // Unknown means this stop still covers the very end of the
+        // queried range -- there's no ping showing them actually leaving.
+        cell: (info) =>
+          !info.row.original.departureKnown ? (
+            <span className="text-faint">—</span>
+          ) : singleDay ? (
+            formatTime(info.getValue())
+          ) : (
+            formatDateTime(info.getValue())
+          ),
+      }),
+      columnHelper.accessor("durationMinutes", {
+        header: "Duration",
+        cell: (info) => (
+          <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted">
+            {formatDuration(info.getValue())}
+          </span>
+        ),
+      }),
+    ],
+    [singleDay]
+  );
 
   const table = useReactTable({
     data: rows,
