@@ -159,7 +159,7 @@ test.describe("expanded location scenario matrix", () => {
     const context = await browser.newContext({ baseURL: baseUrl });
     await context.addCookies(cookiesForContext(cookies, baseUrl));
     const resp = await context.request.post("/api/query", {
-      data: { question: "What did I do 7 months ago?" },
+      data: { question: "Where was I 7 months ago?" },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.json();
