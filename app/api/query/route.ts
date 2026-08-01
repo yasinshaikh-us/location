@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchPingsInRange } from "@/lib/supabase";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { parseDateRangeFromQuestion, summarizeStops } from "@/lib/anthropic";
-import {
-  clusterIntoStops,
-  simplifyRoute,
-  reverseGeocodeStops,
-} from "@/lib/simplify";
+import { clusterIntoStops, simplifyRoute } from "@/lib/simplify";
+import { reverseGeocodeStops } from "@/lib/geocode";
 import { pacificDayBoundsUtc, todayInPacific } from "@/lib/format";
 import type {
   QueryRequestBody,
@@ -83,12 +80,11 @@ export async function POST(
     const simplifiedRoute = simplifyRoute(rawRoute, 15);
 
     // 4. Reverse-geocode stops into place names. reverseGeocodeStops
-    //    dedupes repeat visits to the same place and skips entirely if
-    //    there are too many distinct locations to fit its rate/time
-    //    budget, so no stop-count check is needed here beyond the trivial
-    //    empty-array case.
-    const stops =
-      rawStops.length > 0 ? await reverseGeocodeStops(rawStops) : rawStops;
+    //    checks the shared, cross-user place_cache before ever calling
+    //    the geocoding provider, and only counts still-uncached
+    //    locations against its per-request budget, so no stop-count
+    //    check is needed here.
+    const stops = await reverseGeocodeStops(supabase, rawStops);
 
     // 5. Ask Claude for a short natural-language summary of the period.
     const summary = await summarizeStops(question, stops, { start, end });

@@ -20,7 +20,7 @@ Next.js API route  (/api/query)
    │  1. Claude parses "7 months ago" -> concrete date range
    │  2. Query Supabase for pings in that range
    │  3. Cluster pings into "stops", simplify route (Douglas-Peucker)
-   │  4. Reverse-geocode stops (Nominatim, free)
+   │  4. Reverse-geocode stops (Mapbox, backed by a shared place_cache)
    │  5. Claude summarizes the period in plain English
    ▼
 React frontend  (map + table, cross-filtered)
@@ -135,9 +135,13 @@ to confirm env vars are all green before testing queries.
    - `lib/simplify.ts :: simplifyRoute` — Douglas-Peucker simplification
      on the transit polyline so we're not shipping thousands of
      near-duplicate points to the client or to Claude.
-   - `lib/simplify.ts :: reverseGeocodeStops` — free Nominatim reverse
-     geocoding for stop place names (skipped if there are >15 stops, to
-     stay within Nominatim's 1 req/sec free-tier policy).
+   - `lib/geocode.ts :: reverseGeocodeStops` — reverse geocoding for stop
+     place names, backed by the shared `place_cache` table (see
+     `supabase/migrations`) so a location, once resolved by any user's
+     query, never needs a fresh lookup again. Falls back to Mapbox's
+     Geocoding API for cache misses only (up to 40 new locations per
+     request, to fit the API route's time budget — see the doc comment
+     for the reasoning).
    - `lib/anthropic.ts :: summarizeStops` — Claude writes a short
      natural-language summary of the period from the stop data.
 3. **`app/page.tsx`** — renders the summary, then the map (`MapView.tsx`,
@@ -233,9 +237,13 @@ failure surfaces before the slower browser test ever runs.
 
 ## Known limitations / next steps
 
-- **Reverse geocoding is sequential and rate-limited to 1 req/sec** — fine
-  for a handful of stops, slow for a query spanning many stops. Swap in a
-  paid geocoder (Mapbox, Google) if you need speed at scale.
+- **Reverse geocoding is cached but still sequential for cache misses** —
+  the shared `place_cache` table means most queries hit the cache and pay
+  no per-stop cost at all, but a genuinely new location still costs one
+  sequential Mapbox lookup, capped at 40 new locations per request (see
+  `lib/geocode.ts`) to fit the API route's time budget. A query spanning
+  many places the cache has never seen (a long road trip, say) will still
+  leave some stops ungeocoded.
 - **No auth on the app itself** — anyone with the URL can query your
   location history. **Update: this is now handled** — see "Access control"
   above. The PIN is a single shared secret (fine for personal use by one
@@ -247,6 +255,7 @@ failure surfaces before the slower browser test ever runs.
 - **Stop-clustering thresholds are fixed** (120m radius, 8min minimum) in
   `lib/simplify.ts` — tune `STOP_RADIUS_METERS` / `MIN_STOP_MINUTES` if
   your commute pattern needs different sensitivity.
-- **No caching** — every query re-hits Supabase, Nominatim, and Claude
-  twice (date parse + summary). Fine for personal use; add a cache layer
-  if query volume grows.
+- **No caching for the Claude calls or the raw ping fetch** — every query
+  re-hits Supabase and Claude twice (date parse + summary), even though
+  reverse-geocoded place names are now cached and shared across all
+  users. Fine for personal use; worth revisiting if query volume grows.
