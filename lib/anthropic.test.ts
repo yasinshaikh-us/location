@@ -121,9 +121,53 @@ describe("parseDateRangeFromQuestion / summarizeStops", () => {
       expect(summary).toBe("You were at Capitol Hill in the morning.");
       const call = mockCreate.mock.calls[0][0];
       expect(call.system).toContain("2026-01-01 through 2026-01-01");
+      expect(call.system).toContain("Pacific Time");
       const userContent = call.messages[0].content as string;
       expect(userContent).toContain('"lat": 47.61235');
       expect(userContent).toContain('"place": null');
+    });
+
+    it("formats stop times in Pacific Time (not raw UTC) for a single-day range, matching the table/map", async () => {
+      mockCreate.mockResolvedValueOnce(textResponse("You were there in the morning."));
+      const stops: Stop[] = [
+        {
+          lat: 47.6,
+          lon: -122.3,
+          arrival: "2026-01-01T08:00:00Z", // midnight Pacific (PST, UTC-8, January)
+          departure: "2026-01-01T09:00:00Z", // 1am Pacific
+          durationMinutes: 60,
+          pingCount: 5,
+          arrivalKnown: true,
+          departureKnown: true,
+        },
+      ];
+      await summarizeStops("where was I", stops, { start: "2026-01-01", end: "2026-01-01" });
+
+      const userContent = mockCreate.mock.calls[0][0].messages[0].content as string;
+      expect(userContent).toContain('"arrival": "12:00 AM"');
+      expect(userContent).toContain('"departure": "1:00 AM"');
+      expect(userContent).not.toContain("2026-01-01T08:00:00Z");
+    });
+
+    it("formats stop times with the date included for a multi-day range", async () => {
+      mockCreate.mockResolvedValueOnce(textResponse("You visited a few places."));
+      const stops: Stop[] = [
+        {
+          lat: 47.6,
+          lon: -122.3,
+          arrival: "2026-01-01T08:00:00Z",
+          departure: "2026-01-02T09:00:00Z",
+          durationMinutes: 1500,
+          pingCount: 5,
+          arrivalKnown: true,
+          departureKnown: true,
+        },
+      ];
+      await summarizeStops("where was I this week", stops, { start: "2026-01-01", end: "2026-01-05" });
+
+      const userContent = mockCreate.mock.calls[0][0].messages[0].content as string;
+      expect(userContent).toContain('"arrival": "Jan 1, 12:00 AM"');
+      expect(userContent).toContain('"departure": "Jan 2, 1:00 AM"');
     });
 
     it("falls back to a generic message when Claude returns no text block", async () => {
