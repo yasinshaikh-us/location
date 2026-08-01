@@ -71,6 +71,16 @@ export async function sessionToCookies(session: MonitorSession): Promise<Capture
   return captured;
 }
 
+// @supabase/ssr's cookie options follow the HTTP Set-Cookie convention of
+// lowercase sameSite values ("lax"/"strict"/"none"), but Playwright's
+// addCookies requires the exact capitalized literals below.
+function normalizeSameSite(value: CookieOptions["sameSite"]): "Strict" | "Lax" | "None" {
+  const normalized = String(value ?? "lax").toLowerCase();
+  if (normalized === "strict") return "Strict";
+  if (normalized === "none") return "None";
+  return "Lax";
+}
+
 // Converts captured @supabase/ssr cookie descriptors into the shape
 // Playwright's BrowserContext.addCookies expects.
 export function cookiesForContext(cookies: CapturedCookie[], baseUrl: string) {
@@ -82,7 +92,7 @@ export function cookiesForContext(cookies: CapturedCookie[], baseUrl: string) {
     path: c.options.path ?? "/",
     httpOnly: c.options.httpOnly ?? true,
     secure: true,
-    sameSite: (c.options.sameSite as "Lax" | "Strict" | "None" | undefined) ?? "Lax",
+    sameSite: normalizeSameSite(c.options.sameSite),
   }));
 }
 
