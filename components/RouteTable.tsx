@@ -41,11 +41,26 @@ const columns = [
   }),
   columnHelper.accessor("arrival", {
     header: "Arrived",
-    cell: (info) => formatDateTime(info.getValue()),
+    // Unknown means this stop already covered the very start of the
+    // queried range -- there's no ping showing them actually arriving,
+    // just where the data happens to begin.
+    cell: (info) =>
+      info.row.original.arrivalKnown ? (
+        formatDateTime(info.getValue())
+      ) : (
+        <span className="text-faint">—</span>
+      ),
   }),
   columnHelper.accessor("departure", {
     header: "Departed",
-    cell: (info) => formatDateTime(info.getValue()),
+    // Unknown means this stop still covers the very end of the queried
+    // range -- there's no ping showing them actually leaving.
+    cell: (info) =>
+      info.row.original.departureKnown ? (
+        formatDateTime(info.getValue())
+      ) : (
+        <span className="text-faint">—</span>
+      ),
   }),
   columnHelper.accessor("durationMinutes", {
     header: "Duration",

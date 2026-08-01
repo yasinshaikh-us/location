@@ -109,6 +109,8 @@ describe("parseDateRangeFromQuestion / summarizeStops", () => {
           departure: "2026-01-01T09:00:00Z",
           durationMinutes: 60,
           pingCount: 5,
+          arrivalKnown: true,
+          departureKnown: true,
         },
       ];
       const summary = await summarizeStops("where was I", stops, {
@@ -134,6 +136,8 @@ describe("parseDateRangeFromQuestion / summarizeStops", () => {
           departure: "2026-01-01T09:00:00Z",
           durationMinutes: 60,
           pingCount: 5,
+          arrivalKnown: true,
+          departureKnown: true,
         },
       ];
       const summary = await summarizeStops("where was I", stops, {

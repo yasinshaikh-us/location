@@ -68,6 +68,10 @@ describe("clusterIntoStops", () => {
       departure: "2026-01-01T00:10:00Z",
       durationMinutes: 10,
       pingCount: 3,
+      // The whole queried window is this one stop -- no ping shows
+      // arrival into or departure from it.
+      arrivalKnown: false,
+      departureKnown: false,
     });
   });
 
@@ -94,8 +98,42 @@ describe("clusterIntoStops", () => {
     const { stops, route } = clusterIntoStops(pings);
     expect(route).toHaveLength(7);
     expect(stops).toHaveLength(2);
-    expect(stops[0]).toMatchObject({ lat: 47.0, lon: -122.0, pingCount: 3, durationMinutes: 10 });
-    expect(stops[1]).toMatchObject({ lat: 47.05, lon: -122.0, pingCount: 4, durationMinutes: 15 });
+    // Stop A opens the queried window (arrival unknown) but there's a
+    // ping showing it ends (departure known, into the jump to Stop B).
+    expect(stops[0]).toMatchObject({
+      lat: 47.0,
+      lon: -122.0,
+      pingCount: 3,
+      durationMinutes: 10,
+      arrivalKnown: false,
+      departureKnown: true,
+    });
+    // Stop B is arrived at via that same jump (arrival known) but closes
+    // out the queried window (departure unknown).
+    expect(stops[1]).toMatchObject({
+      lat: 47.05,
+      lon: -122.0,
+      pingCount: 4,
+      durationMinutes: 15,
+      arrivalKnown: true,
+      departureKnown: false,
+    });
+  });
+
+  it("marks both arrival and departure known for a stop with observed movement on both sides", () => {
+    const pings = [
+      // In transit into Stop A.
+      ping(46.9, -121.9, "2026-01-01T00:00:00Z"),
+      // Stop A: 10 min span.
+      ping(47.0, -122.0, "2026-01-01T00:05:00Z"),
+      ping(47.0, -122.0, "2026-01-01T00:10:00Z"),
+      ping(47.0, -122.0, "2026-01-01T00:15:00Z"),
+      // In transit away from Stop A.
+      ping(47.1, -122.1, "2026-01-01T00:20:00Z"),
+    ];
+    const { stops } = clusterIntoStops(pings);
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toMatchObject({ arrivalKnown: true, departureKnown: true });
   });
 
   it("averages lat/lon across all pings in the cluster", () => {
@@ -168,6 +206,8 @@ describe("reverseGeocodeStops", () => {
     departure: "2026-01-01T00:10:00Z",
     durationMinutes: 10,
     pingCount: 3,
+    arrivalKnown: true,
+    departureKnown: true,
   };
 
   it("prefers neighbourhood over other address fields", async () => {

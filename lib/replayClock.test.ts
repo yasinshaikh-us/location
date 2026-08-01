@@ -9,6 +9,8 @@ const stop = (arrival: string, departure: string): Stop => ({
   departure,
   durationMinutes: (new Date(departure).getTime() - new Date(arrival).getTime()) / 60000,
   pingCount: 5,
+  arrivalKnown: true,
+  departureKnown: true,
 });
 
 describe("advanceReplayClock", () => {
