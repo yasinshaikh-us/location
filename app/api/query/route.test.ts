@@ -158,8 +158,23 @@ describe("POST /api/query", () => {
     const res = await POST(queryRequest({ question: "where was I yesterday" }));
     expect(mockReverseGeocodeStops).not.toHaveBeenCalled();
     const body = await res.json();
+    expect(body.summary).toBe("No location data was recorded on 2026-07-28.");
+  });
+
+  it("uses a date-range (not single-date) no-data summary when start and end differ", async () => {
+    mockClusterIntoStops.mockReturnValue({ stops: [], route: [] });
+    mockSimplifyRoute.mockReturnValue([]);
+    mockParseDateRangeFromQuestion.mockResolvedValue({
+      isLocationQuery: true,
+      start: "2026-07-01",
+      end: "2026-07-28",
+      reasoning: "last month",
+    });
+
+    const res = await POST(queryRequest({ question: "where was I last month" }));
+    const body = await res.json();
     expect(body.summary).toBe(
-      "No location data was recorded between 2026-07-28 and 2026-07-28. (yesterday)"
+      "No location data was recorded between 2026-07-01 and 2026-07-28."
     );
   });
 
