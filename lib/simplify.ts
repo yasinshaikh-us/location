@@ -183,16 +183,47 @@ export function simplifyRoute(
   return dp(points);
 }
 
+// Nominatim's free endpoint is capped at 1 request/second, so a query
+// spanning many distinct places (as opposed to many *stops* -- see
+// locationKey below) could run past this function's time/rate budget.
+// Past this many distinct locations, every stop is returned unchanged
+// (no placeName) rather than risking the request timing out partway
+// through and leaving some stops geocoded and others not.
+const MAX_DISTINCT_LOCATIONS = 20;
+
+// Buckets a stop's coordinates to ~111m of precision (close to
+// clusterIntoStops' own STOP_RADIUS_METERS) so repeat visits to the same
+// place -- e.g. a home base returned to throughout a multi-day query --
+// dedupe to the same key rather than each counting as a separate
+// distinct location.
+function locationKey(stop: Stop): string {
+  return `${stop.lat.toFixed(3)},${stop.lon.toFixed(3)}`;
+}
+
 /**
  * Reverse-geocodes stop coordinates into human-readable place names
- * using the free Nominatim (OpenStreetMap) API. Runs requests
- * sequentially with a small delay to respect Nominatim's 1 req/sec
- * usage policy — fine for the handful of stops in a typical query.
+ * using the free Nominatim (OpenStreetMap) API. Stops that bucket to the
+ * same locationKey (repeat visits to the same place) share a single
+ * lookup rather than each costing a separate rate-limited request.
+ * Requests are run sequentially with a small delay between them to
+ * respect Nominatim's 1 req/sec usage policy.
  */
 export async function reverseGeocodeStops(stops: Stop[]): Promise<Stop[]> {
+  const distinctCount = new Set(stops.map(locationKey)).size;
+  if (distinctCount > MAX_DISTINCT_LOCATIONS) return stops;
+
+  const cache = new Map<string, string | undefined>();
   const results: Stop[] = [];
 
   for (const stop of stops) {
+    const key = locationKey(stop);
+
+    if (cache.has(key)) {
+      results.push({ ...stop, placeName: cache.get(key) });
+      continue;
+    }
+
+    let name: string | undefined;
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${stop.lat}&lon=${stop.lon}&format=jsonv2&zoom=16`;
       const res = await fetch(url, {
@@ -208,7 +239,7 @@ export async function reverseGeocodeStops(stops: Stop[]): Promise<Stop[]> {
         // Prefer neighborhood-level area names over a precise street
         // address — "Capitol Hill" reads better in a summary/table than
         // "1234 15th Ave E", and approximate is fine for this app.
-        const name =
+        name =
           address.neighbourhood ||
           address.suburb ||
           address.quarter ||
@@ -219,15 +250,17 @@ export async function reverseGeocodeStops(stops: Stop[]): Promise<Stop[]> {
           data.name ||
           address.road ||
           data.display_name?.split(",").slice(0, 2).join(",");
-        results.push({ ...stop, placeName: name });
-      } else {
-        results.push(stop);
       }
     } catch {
-      results.push(stop);
+      // leave name undefined -- caches the miss so a retry isn't
+      // attempted for other stops sharing this same location.
     }
 
-    // Be polite to the free Nominatim endpoint.
+    cache.set(key, name);
+    results.push({ ...stop, placeName: name });
+
+    // Be polite to the free Nominatim endpoint -- only needed after an
+    // actual network call, not a cache hit above.
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 

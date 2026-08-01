@@ -7,8 +7,11 @@ import { pacificDayBoundsUtc } from "@/lib/format";
 // The query route is a pure orchestrator over lib/supabase, lib/anthropic,
 // and lib/simplify — each already has its own unit tests, so here we mock
 // all three at the module boundary and test only this route's own logic:
-// guard clauses, the reverse-geocode skip-if->15-stops rule, and how the
-// pieces get assembled into the response body / GeoJSON.
+// guard clauses, and how the pieces get assembled into the response body /
+// GeoJSON. The reverse-geocode distinct-location skip rule now lives
+// inside lib/simplify.ts's reverseGeocodeStops itself (see
+// lib/simplify.test.ts) — this route just always calls it when there's at
+// least one stop.
 const mockFetchPingsInRange = vi.fn();
 vi.mock("@/lib/supabase", () => ({
   fetchPingsInRange: (...args: unknown[]) => mockFetchPingsInRange(...args),
@@ -138,17 +141,17 @@ describe("POST /api/query", () => {
     expect(mockCreateServerSupabaseClient).toHaveBeenCalled();
   });
 
-  it("reverse-geocodes when there's between 1 and 15 stops", async () => {
+  it("reverse-geocodes when there's at least one stop", async () => {
     await POST(queryRequest({ question: "where was I yesterday" }));
     expect(mockReverseGeocodeStops).toHaveBeenCalledWith([STOP]);
   });
 
-  it("skips reverse geocoding when there are more than 15 stops", async () => {
+  it("still calls reverseGeocodeStops with many stops -- the distinct-location skip decision lives inside that function now, not here", async () => {
     const manyStops = Array.from({ length: 16 }, (_, i) => ({ ...STOP, lat: 47.6 + i }));
     mockClusterIntoStops.mockReturnValue({ stops: manyStops, route: [ROUTE_POINT] });
 
     const res = await POST(queryRequest({ question: "where was I over the last month" }));
-    expect(mockReverseGeocodeStops).not.toHaveBeenCalled();
+    expect(mockReverseGeocodeStops).toHaveBeenCalledWith(manyStops);
     const body = await res.json();
     expect(body.stops).toHaveLength(16);
   });

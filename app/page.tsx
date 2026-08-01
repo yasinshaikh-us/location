@@ -43,6 +43,8 @@ export default function HomePage() {
     return interpolatePosition(result.route, scrubMs);
   }, [result, scrubMs]);
 
+  const isSingleDay = result ? result.dateRange.start === result.dateRange.end : false;
+
   async function handleQuery(question: string) {
     setIsLoading(true);
     setError(null);
@@ -129,7 +131,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
               <div className="mb-1.5 inline-flex items-center rounded-full border border-accent bg-surface-recessed px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text">
-                {result.dateRange.start === result.dateRange.end
+                {isSingleDay
                   ? formatShortDate(result.dateRange.start)
                   : `${formatShortDate(result.dateRange.start)} – ${formatShortDate(
                       result.dateRange.end
@@ -146,6 +148,7 @@ export default function HomePage() {
                 selectedStopIndex={selectedStopIndex}
                 onSelectStop={setSelectedStopIndex}
                 playhead={playhead}
+                singleDay={isSingleDay}
               />
             </div>
 
@@ -165,6 +168,7 @@ export default function HomePage() {
                 rows={result.tableRows}
                 selectedIndex={selectedStopIndex}
                 onSelectRow={setSelectedStopIndex}
+                singleDay={isSingleDay}
               />
             </div>
           </div>

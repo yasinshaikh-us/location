@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { GeoJSONFeatureCollection } from "@/lib/types";
-import { formatDateTime, formatDuration } from "@/lib/format";
+import { formatDateTime, formatDuration, formatTime } from "@/lib/format";
 
 mapboxgl.accessToken = process.env.MAPBOX_TOKEN ?? "";
 
@@ -14,6 +14,9 @@ interface MapViewProps {
   onSelectStop: (index: number | null) => void;
   /** Interpolated playhead position from the timeline scrubber, if active */
   playhead?: { lat: number; lon: number; isMoving: boolean } | null;
+  // Whether every stop falls on the same calendar day -- when true, stop
+  // popups show just the time instead of repeating the (redundant) date.
+  singleDay: boolean;
 }
 
 const DEFAULT_CENTER: [number, number] = [-122.1795, 47.6205]; // [lon, lat] — Kirkland, WA fallback
@@ -130,6 +133,7 @@ export default function MapView({
   selectedStopIndex,
   onSelectStop,
   playhead,
+  singleDay,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -283,8 +287,16 @@ export default function MapView({
           <div className="text-sm">
             <div className="font-semibold">{props.place}</div>
             <div>
-              {formatDateTime(props.arrival)} –{" "}
-              {formatDateTime(props.departure)}
+              {singleDay ? (
+                <>
+                  {formatTime(props.arrival)} – {formatTime(props.departure)}
+                </>
+              ) : (
+                <>
+                  {formatDateTime(props.arrival)} –{" "}
+                  {formatDateTime(props.departure)}
+                </>
+              )}
             </div>
             <div className="text-faint">
               {formatDuration(props.durationMinutes)}
@@ -299,7 +311,7 @@ export default function MapView({
         .addTo(map);
       stopMarkersRef.current.push(marker);
     });
-  }, [stopFeatures, selectedStopIndex, onSelectStop]);
+  }, [stopFeatures, selectedStopIndex, onSelectStop, singleDay]);
 
   // Playhead marker.
   useEffect(() => {

@@ -251,4 +251,76 @@ describe("reverseGeocodeStops", () => {
     const [out] = await reverseGeocodeStops([baseStop]);
     expect(out).toEqual(baseStop);
   });
+
+  it("dedupes repeat visits to (almost) the same place into a single lookup, reused for every matching stop", async () => {
+    stubInstantTimers();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ address: { neighbourhood: "Capitol Hill" } }),
+    })) as unknown as typeof fetch;
+    global.fetch = fetchMock;
+
+    const home = { ...baseStop, lat: 47.6, lon: -122.3 };
+    // Close enough to bucket to the same locationKey (~111m precision).
+    const homeAgain = { ...baseStop, lat: 47.6001, lon: -122.3001 };
+    const out = await reverseGeocodeStops([home, homeAgain, home]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(out.map((s) => s.placeName)).toEqual([
+      "Capitol Hill",
+      "Capitol Hill",
+      "Capitol Hill",
+    ]);
+  });
+
+  it("looks up each distinct location separately", async () => {
+    stubInstantTimers();
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () => ({
+        address: { neighbourhood: url.includes("lat=47.6&") ? "Home" : "Work" },
+      }),
+    })) as unknown as typeof fetch;
+    global.fetch = fetchMock;
+
+    const home = { ...baseStop, lat: 47.6, lon: -122.3 };
+    const work = { ...baseStop, lat: 47.7, lon: -122.4 };
+    const out = await reverseGeocodeStops([home, work]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(out.map((s) => s.placeName)).toEqual(["Home", "Work"]);
+  });
+
+  it("skips reverse geocoding entirely (no network calls) when there are more distinct locations than the budget allows", async () => {
+    stubInstantTimers();
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    // 21 stops, every one at a distinct location -- one more than
+    // MAX_DISTINCT_LOCATIONS (20).
+    const manyStops = Array.from({ length: 21 }, (_, i) => ({
+      ...baseStop,
+      lat: 47.6 + i,
+    }));
+    const out = await reverseGeocodeStops(manyStops);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(out).toEqual(manyStops);
+  });
+
+  it("still geocodes when many repeat-visit stops bucket down to a distinct-location count within the budget", async () => {
+    stubInstantTimers();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ address: { neighbourhood: "Home" } }),
+    })) as unknown as typeof fetch;
+    global.fetch = fetchMock;
+
+    // 30 stops, but all at the same place -- only 1 distinct location.
+    const manyVisitsSamePlace = Array.from({ length: 30 }, () => ({ ...baseStop }));
+    const out = await reverseGeocodeStops(manyVisitsSamePlace);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(out.every((s) => s.placeName === "Home")).toBe(true);
+  });
 });
