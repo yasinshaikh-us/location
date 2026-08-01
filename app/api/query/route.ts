@@ -75,7 +75,7 @@ export async function POST(
     // 2. Pull raw pings from Supabase/PostGIS for that range. Uses a
     //    session-bound client, not the service-role key — RLS restricts
     //    this to the signed-in user's own rows.
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const pings = await fetchPingsInRange(supabase, startIso, endIso);
 
     // 3. Cluster into stops + simplify the in-transit polyline.
