@@ -4,7 +4,7 @@
 //   layout.tsx and Mapbox GL's injected <style> tags aren't served from a
 //   file Next can attach a nonce to. A nonce-based CSP would remove this,
 //   but adds real complexity (threading a per-request nonce through
-//   middleware.ts's several early-return branches) for a personal app —
+//   proxy.ts's several early-return branches) for a personal app —
 //   noted here as a follow-up worth doing if this app's threat model ever
 //   changes.
 // - api.mapbox.com / events.mapbox.com / *.tiles.mapbox.com: Mapbox GL JS

@@ -29,7 +29,7 @@ const PUBLIC_PATHS = [
   "/sw.js",
 ];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   let res = NextResponse.next({ request: req });

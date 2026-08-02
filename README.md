@@ -171,7 +171,7 @@ real queries.
 
 Since this app exposes real location history over a public URL, every route —
 pages *and* API endpoints — is gated behind a signed-in Supabase Auth session,
-enforced in `middleware.ts`:
+enforced in `proxy.ts`:
 
 - `/login` — the sign-in screen ("Continue with Google"), the only page
   reachable without a session
@@ -223,10 +223,10 @@ npm run test:e2e  # one end-to-end smoke test (Playwright), mocked /api/query, n
 `lib/simplify.ts` (stop clustering, route simplification, reverse geocoding),
 and `lib/auth.ts` directly; `lib/supabase.ts` and `lib/anthropic.ts` with their
 respective clients mocked at the module boundary; and every `app/api/*/route.ts`
-handler and `middleware.ts` with their `lib/` collaborators mocked so each
+handler and `proxy.ts` with their `lib/` collaborators mocked so each
 layer is tested against its own contract. `npm run test:e2e` builds the app,
 serves it locally, and drives it in a real browser: it logs in for real
-through `/api/auth/login` (exercising `middleware.ts`/`lib/auth.ts`
+through `/api/auth/login` (exercising `proxy.ts`/`lib/auth.ts`
 end-to-end), then mocks `/api/query` at the network layer to check that a
 query renders a summary, a map, and a stops table, and that logout redirects
 back to `/login`.

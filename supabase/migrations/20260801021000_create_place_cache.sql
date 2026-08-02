@@ -39,7 +39,7 @@ alter table public.place_cache enable row level security;
 
 -- Not per-user data: any authenticated user (the only ones who ever
 -- reach the /api/query code path that touches this table -- see
--- middleware.ts) can read the whole shared cache and contribute new
+-- proxy.ts) can read the whole shared cache and contribute new
 -- entries to it. There's no owner column, since a cached place name
 -- isn't "owned" by whoever happened to look it up first. (The Supabase
 -- advisor flags this INSERT policy's `with check (true)` as overly

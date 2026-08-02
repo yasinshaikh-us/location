@@ -29,6 +29,11 @@ export default function QueryBox({ onSubmit, isLoading }: QueryBoxProps) {
   // for the next question.
   const [example, setExample] = useState(EXAMPLES[0]);
   useEffect(() => {
+    // Intentional: this deliberately re-renders once on mount to replace
+    // the static first example with a randomly-picked one (see comment
+    // above) — not the "derive state from props" antipattern this rule
+    // otherwise guards against.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExample(randomExample());
   }, []);
 
@@ -53,7 +58,7 @@ export default function QueryBox({ onSubmit, isLoading }: QueryBoxProps) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={`Ask where you were, e.g. "${example}"`}
-          className="w-full rounded-xl border border-border bg-surface py-2.5 pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-faint focus:border-accent focus:ring-4 focus:ring-accent/10"
+          className="w-full rounded-xl border border-border bg-surface py-2.5 pl-9 pr-4 text-sm text-text outline-hidden transition placeholder:text-faint focus:border-accent focus:ring-4 focus:ring-accent/10"
           disabled={isLoading}
         />
       </div>
