@@ -1,6 +1,43 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-bg: rgb(var(--bg));
+  --color-surface: rgb(var(--surface));
+  --color-surface-recessed: rgb(var(--surface-recessed));
+  --color-border: rgb(var(--border));
+  --color-border-subtle: rgb(var(--border-subtle));
+  --color-text: rgb(var(--text));
+  --color-muted: rgb(var(--text-muted));
+  --color-faint: rgb(var(--text-faint));
+  --color-accent: rgb(var(--accent));
+  --color-accent-strong: rgb(var(--accent-strong));
+  --color-danger: rgb(var(--danger));
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono,
+    monospace;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* Design tokens, as RGB triplets so Tailwind's opacity modifiers
    (bg-accent/10, border-danger/40, ...) work directly off these

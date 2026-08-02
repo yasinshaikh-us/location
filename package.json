@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -14,26 +14,28 @@
     "test:synthetic:auth": "playwright test -c playwright.synthetic.config.ts tests/synthetic/auth-queries.spec.ts tests/synthetic/db-crosscheck.spec.ts tests/synthetic/scenario-matrix.spec.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.115.0",
     "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.45.4",
-    "@tanstack/react-table": "^8.20.5",
-    "lucide-react": "^0.454.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^1.28.0",
     "mapbox-gl": "^3.27.0",
-    "next": "^15.5.22",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.47.0",
-    "@types/node": "^20.14.15",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.41",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.5.4",
-    "vite-tsconfig-paths": "^5.0.1",
-    "vitest": "^2.1.0"
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.12",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Auth is now Google OAuth via Supabase (see middleware.ts, app/login,
+// Auth is now Google OAuth via Supabase (see proxy.ts, app/login,
 // app/auth/callback) instead of a PIN this repo controlled end-to-end.
 // A real "Continue with Google" flow can't be driven headlessly here —
 // it requires a real Google account plus Supabase's OAuth redirect, which

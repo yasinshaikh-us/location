@@ -88,7 +88,7 @@ export default function TimelineScrubber({
   const timeLabel = formatTime(currentMs);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur">
+    <div className="rounded-2xl border border-border bg-surface/80 p-4 backdrop-blur-sm">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-faint">Replay</span>
         <span className="rounded-full bg-accent px-3 py-1 font-mono text-sm font-semibold tabular-nums text-bg">

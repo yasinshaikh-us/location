@@ -67,7 +67,7 @@ export default function LoginPage() {
 
       <p className="max-w-xs text-center text-xs text-faint">
         This gates access to personal location history. Once signed in, you
-        can only ever see your own location history — never anyone else's.
+        can only ever see your own location history — never anyone else&apos;s.
       </p>
     </main>
   );

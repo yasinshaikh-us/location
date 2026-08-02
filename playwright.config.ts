@@ -35,7 +35,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      // middleware.ts needs a syntactically valid Supabase URL/key to
+      // proxy.ts needs a syntactically valid Supabase URL/key to
       // construct its client; since there's never a session cookie in
       // this smoke test, auth.getUser() resolves to no-user locally
       // without an actual network round-trip, so these values never need

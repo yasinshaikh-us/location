@@ -19,6 +19,12 @@ export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
+    // Intentional: syncs React state with the DOM attribute the blocking
+    // theme-init script in layout.tsx already set before hydration —
+    // this can only be read client-side, so a one-time effect (rather
+    // than deriving in the initial render, which would mismatch SSR
+    // output) is the correct tool here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(currentTheme());
   }, []);
 
