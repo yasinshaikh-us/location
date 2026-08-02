@@ -78,13 +78,21 @@ function lastWeekday(targetDow: number): Date {
   return d;
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// Every caller in this file passes a Date built by pacificTodayAnchor()
+// (or day/month arithmetic on top of it), whose UTC calendar fields *are*
+// the intended Pacific calendar date by construction. Formatting via
+// toLocaleDateString(..., { timeZone: "America/Los_Angeles" }) would
+// re-derive the calendar date from the instant instead -- and since these
+// anchors sit at UTC midnight, that instant is always ~16-17:00 Pacific
+// on the *previous* day, silently asking about the wrong date. Read the
+// UTC fields directly instead of re-converting through a timezone.
 function humanDateLabel(d: Date): string {
-  return d.toLocaleDateString("en-US", {
-    timeZone: "America/Los_Angeles",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 function isoDate(d: Date): string {
