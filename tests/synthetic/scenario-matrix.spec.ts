@@ -37,21 +37,42 @@ function middayUtcOn(date: Date): Date {
   return d;
 }
 
+// The app resolves relative-date phrases ("yesterday", "7 months ago", ...)
+// against todayInPacific() (lib/format.ts), i.e. the Pacific *calendar*
+// date, not the UTC calendar date of the current instant. Those two dates
+// disagree for ~7-8 hours out of every day (UTC midnight until Pacific
+// midnight), so anchoring this file's "N days/months ago" arithmetic to a
+// raw `new Date()` -- as this used to do -- makes every such test flip to
+// the wrong day whenever the suite happens to run in that window (as this
+// daily monitor does once every ~24h). Anchor to the same Pacific calendar
+// day the app uses instead, expressed as a UTC-midnight Date so day-level
+// UTC arithmetic (setUTCDate/setUTCMonth/getUTCDay) stays correct.
+function pacificTodayAnchor(): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+}
+
 function daysAgo(n: number): Date {
-  const d = new Date();
+  const d = pacificTodayAnchor();
   d.setUTCDate(d.getUTCDate() - n);
   return d;
 }
 
 function monthsAgo(n: number): Date {
-  const d = new Date();
+  const d = pacificTodayAnchor();
   d.setUTCMonth(d.getUTCMonth() - n);
   return d;
 }
 
 // Most recent occurrence of the given weekday (0=Sun..6=Sat) strictly before today.
 function lastWeekday(targetDow: number): Date {
-  const d = new Date();
+  const d = pacificTodayAnchor();
   const diff = (d.getUTCDay() - targetDow + 7) % 7 || 7;
   d.setUTCDate(d.getUTCDate() - diff);
   return d;
