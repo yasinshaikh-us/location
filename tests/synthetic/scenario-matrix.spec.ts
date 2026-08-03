@@ -162,9 +162,22 @@ test.describe("expanded location scenario matrix", () => {
   });
 
   test("'last weekend' spans both Saturday and Sunday (UI)", async ({ browser }) => {
-    const saturday = lastWeekday(6);
-    const sunday = new Date(saturday);
+    let saturday = lastWeekday(6);
+    let sunday = new Date(saturday);
     sunday.setUTCDate(saturday.getUTCDate() + 1);
+    // "Last weekend" is ambiguous when today is itself Saturday or Sunday
+    // -- lastWeekday(6) only guarantees the Saturday isn't *today*, but if
+    // today is Sunday that Saturday is yesterday, i.e. the currently
+    // in-progress weekend. A reasonable interpretation (confirmed to be
+    // the app's own) treats "last weekend" as the most recently *fully
+    // completed* Sat/Sun, not one still underway, so roll back a further
+    // 7 days whenever today would otherwise fall inside the candidate
+    // weekend.
+    if (isoDate(sunday) === isoDate(pacificTodayAnchor())) {
+      saturday.setUTCDate(saturday.getUTCDate() - 7);
+      sunday = new Date(saturday);
+      sunday.setUTCDate(saturday.getUTCDate() + 1);
+    }
     await insertPings(session, [...stopPings(saturday), ...stopPings(sunday, COORDS_B)]);
 
     const cookies = await sessionToCookies(session);
