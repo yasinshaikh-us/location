@@ -1,9 +1,12 @@
 "use client";
 
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
+  useTable,
+  tableFeatures,
+  rowSortingFeature,
+  createSortedRowModel,
+  sortFn_alphanumeric,
+  sortFn_basic,
   createColumnHelper,
   flexRender,
   type SortingState,
@@ -12,6 +15,17 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, MapPin } from "lucide-react";
 import type { TableRow } from "@/lib/types";
 import { formatDateTime, formatDuration, formatTime } from "@/lib/format";
+
+// @tanstack/react-table v9 requires features to be registered explicitly
+// (see the library's own migrate-v8-to-v9 skill) -- this table only needs
+// client-side column sorting, so that's the only feature/row-model slot
+// registered here alongside the built-in sort comparators the columns use
+// (alphanumeric for the string columns, basic for the numeric one).
+const features = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: { alphanumeric: sortFn_alphanumeric, basic: sortFn_basic },
+});
 
 interface RouteTableProps {
   rows: TableRow[];
@@ -23,7 +37,7 @@ interface RouteTableProps {
   singleDay: boolean;
 }
 
-const columnHelper = createColumnHelper<TableRow>();
+const columnHelper = createColumnHelper<typeof features, TableRow>();
 
 // Column widths as percentages so the table stays a fixed layout (see
 // `table-fixed` below) and truncates overflowing text instead of
@@ -45,59 +59,63 @@ export default function RouteTable({
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo(
-    () => [
-      columnHelper.accessor("place", {
-        header: "Place",
-        cell: (info) => (
-          <span className="font-medium text-text">{info.getValue()}</span>
-        ),
-      }),
-      columnHelper.accessor("arrival", {
-        header: "Arrived",
-        // Unknown means this stop already covered the very start of the
-        // queried range -- there's no ping showing them actually
-        // arriving, just where the data happens to begin.
-        cell: (info) =>
-          !info.row.original.arrivalKnown ? (
-            <span className="text-faint">—</span>
-          ) : singleDay ? (
-            formatTime(info.getValue())
-          ) : (
-            formatDateTime(info.getValue())
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("place", {
+          header: "Place",
+          sortFn: "alphanumeric",
+          cell: (info) => (
+            <span className="font-medium text-text">{info.getValue()}</span>
           ),
-      }),
-      columnHelper.accessor("departure", {
-        header: "Departed",
-        // Unknown means this stop still covers the very end of the
-        // queried range -- there's no ping showing them actually leaving.
-        cell: (info) =>
-          !info.row.original.departureKnown ? (
-            <span className="text-faint">—</span>
-          ) : singleDay ? (
-            formatTime(info.getValue())
-          ) : (
-            formatDateTime(info.getValue())
+        }),
+        columnHelper.accessor("arrival", {
+          header: "Arrived",
+          sortFn: "alphanumeric",
+          // Unknown means this stop already covered the very start of the
+          // queried range -- there's no ping showing them actually
+          // arriving, just where the data happens to begin.
+          cell: (info) =>
+            !info.row.original.arrivalKnown ? (
+              <span className="text-faint">—</span>
+            ) : singleDay ? (
+              formatTime(info.getValue())
+            ) : (
+              formatDateTime(info.getValue())
+            ),
+        }),
+        columnHelper.accessor("departure", {
+          header: "Departed",
+          sortFn: "alphanumeric",
+          // Unknown means this stop still covers the very end of the
+          // queried range -- there's no ping showing them actually leaving.
+          cell: (info) =>
+            !info.row.original.departureKnown ? (
+              <span className="text-faint">—</span>
+            ) : singleDay ? (
+              formatTime(info.getValue())
+            ) : (
+              formatDateTime(info.getValue())
+            ),
+        }),
+        columnHelper.accessor("durationMinutes", {
+          header: "Duration",
+          sortFn: "basic",
+          cell: (info) => (
+            <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted">
+              {formatDuration(info.getValue())}
+            </span>
           ),
-      }),
-      columnHelper.accessor("durationMinutes", {
-        header: "Duration",
-        cell: (info) => (
-          <span className="inline-flex rounded-full bg-surface-recessed px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted">
-            {formatDuration(info.getValue())}
-          </span>
-        ),
-      }),
-    ],
+        }),
+      ]),
     [singleDay]
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   if (rows.length === 0) {
@@ -152,7 +170,7 @@ export default function RouteTable({
                   isSelected ? "bg-accent/10" : ""
                 }`}
               >
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <td
                     key={cell.id}
                     className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-2 text-muted"
