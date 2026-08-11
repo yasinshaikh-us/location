@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import ThemeToggle from "@/components/ThemeToggle";
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("error") === "auth";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,12 +66,24 @@ export default function LoginPage() {
         Continue with Google
       </button>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {(error || authError) && (
+        <p className="text-sm text-danger">
+          {error ?? "Couldn't sign you in — try again"}
+        </p>
+      )}
 
       <p className="max-w-xs text-center text-xs text-faint">
         This gates access to personal location history. Once signed in, you
         can only ever see your own location history — never anyone else&apos;s.
       </p>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
