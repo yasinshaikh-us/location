@@ -127,6 +127,28 @@ describe("parseDateRangeFromQuestion / summarizeStops", () => {
       expect(userContent).toContain('"place": null');
     });
 
+    it("flags the shared place-cache 'place' field as untrusted input, not just the question", async () => {
+      mockCreate.mockResolvedValueOnce(textResponse("You were downtown."));
+      const stops: Stop[] = [
+        {
+          lat: 47.6,
+          lon: -122.3,
+          arrival: "2026-01-01T08:00:00Z",
+          departure: "2026-01-01T09:00:00Z",
+          durationMinutes: 60,
+          pingCount: 5,
+          arrivalKnown: true,
+          departureKnown: true,
+        },
+      ];
+      await summarizeStops("where was I", stops, { start: "2026-01-01", end: "2026-01-01" });
+
+      const call = mockCreate.mock.calls[0][0];
+      expect(call.system).toContain('"place"');
+      expect(call.system.toLowerCase()).toContain("untrusted");
+      expect(call.system.toLowerCase()).toContain("shared");
+    });
+
     it("formats stop times in Pacific Time (not raw UTC) for a single-day range, matching the table/map", async () => {
       mockCreate.mockResolvedValueOnce(textResponse("You were there in the morning."));
       const stops: Stop[] = [
