@@ -8,7 +8,13 @@ export const runtime = "nodejs";
 // proxy.ts and every server-side Supabase client then read.
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const next = req.nextUrl.searchParams.get("next") ?? "/";
+  const rawNext = req.nextUrl.searchParams.get("next");
+  // Only allow same-site relative paths so this can't be used as an open
+  // redirect (e.g. `next=https://evil.example` or `next=//evil.example`).
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/";
 
   if (code) {
     const supabase = await createServerSupabaseClient();
