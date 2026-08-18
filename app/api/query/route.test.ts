@@ -43,6 +43,11 @@ vi.mock("@/lib/geocode", () => ({
   reverseGeocodeStops: (...args: unknown[]) => mockReverseGeocodeStops(...args),
 }));
 
+const mockCheckQueryRateLimit = vi.fn();
+vi.mock("@/lib/rateLimit", () => ({
+  checkQueryRateLimit: (...args: unknown[]) => mockCheckQueryRateLimit(...args),
+}));
+
 import { POST } from "./route";
 
 function queryRequest(body: unknown) {
@@ -90,6 +95,7 @@ describe("POST /api/query", () => {
       async (_supabase: unknown, stops: Stop[]) => stops
     );
     mockSummarizeStops.mockResolvedValue("You were at Capitol Hill.");
+    mockCheckQueryRateLimit.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
     mockParseDateRangeFromQuestion.mockResolvedValue({
       isLocationQuery: true,
       start: "2026-07-28",
@@ -102,6 +108,21 @@ describe("POST /api/query", () => {
     const res = await POST(queryRequest({}));
     expect(res.status).toBe(400);
     expect(mockParseDateRangeFromQuestion).not.toHaveBeenCalled();
+  });
+
+  it("429s with a Retry-After header when the rate limit is exceeded, before either Claude call", async () => {
+    mockCheckQueryRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 42 });
+    const res = await POST(queryRequest({ question: "where was I yesterday" }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("42");
+    expect(mockParseDateRangeFromQuestion).not.toHaveBeenCalled();
+    expect(mockSummarizeStops).not.toHaveBeenCalled();
+    expect(mockFetchPingsInRange).not.toHaveBeenCalled();
+  });
+
+  it("checks the rate limit with the same session-bound client used for the ping fetch", async () => {
+    await POST(queryRequest({ question: "where was I yesterday" }));
+    expect(mockCheckQueryRateLimit).toHaveBeenCalledWith(FAKE_SUPABASE_CLIENT);
   });
 
   it("400s with the off-topic message when the question isn't a location query", async () => {

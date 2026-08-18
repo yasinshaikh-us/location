@@ -246,12 +246,15 @@ failure surfaces before the slower browser test ever runs.
   leave some stops ungeocoded.
 - **No auth on the app itself** — anyone with the URL can query your
   location history. **Update: this is now handled** — see "Access control"
-  above. The PIN is a single shared secret (fine for personal use by one
-  person), not per-user accounts. Repeated wrong guesses from the same IP
-  are throttled (8 attempts per 5-minute window, `lib/auth.ts`) — an
-  in-memory, per-isolate guard, same caveat as the scorecard app's: it
-  resets on cold start and isn't shared across regions, so treat it as a
-  deterrent against naive scripts, not a hard limit.
+  above. Sign-in is Google OAuth via Supabase Auth (any Google account can
+  create a session; access to *data* is what's restricted, per-user via
+  RLS), not a shared PIN — there's no login-attempt throttling to speak of
+  because there's no password/PIN to brute-force. What *is* rate-limited
+  is `/api/query` itself: each call triggers two billed Claude calls, so a
+  signed-in user (or a leaked session) is capped at 20 requests per
+  5-minute window, enforced in Postgres (see
+  `supabase/migrations/20260818000000_add_query_rate_limit.sql`) so it
+  can't be bypassed by calling PostgREST directly.
 - **Stop-clustering thresholds are fixed** (120m radius, 8min minimum) in
   `lib/simplify.ts` — tune `STOP_RADIUS_METERS` / `MIN_STOP_MINUTES` if
   your commute pattern needs different sensitivity.
