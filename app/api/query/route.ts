@@ -5,6 +5,7 @@ import { parseDateRangeFromQuestion, summarizeStops } from "@/lib/anthropic";
 import { clusterIntoStops, simplifyRoute } from "@/lib/simplify";
 import { reverseGeocodeStops } from "@/lib/geocode";
 import { pacificDayBoundsUtc, todayInPacific } from "@/lib/format";
+import { checkQueryRateLimit } from "@/lib/rateLimit";
 import type {
   QueryRequestBody,
   QueryResponseBody,
@@ -31,6 +32,21 @@ export async function POST(
       return NextResponse.json(
         { error: "Missing 'question' in request body" },
         { status: 400 }
+      );
+    }
+
+    // 0. Rate-limit before either Claude call: each request to this
+    //    route triggers up to two billed Anthropic calls, and nothing
+    //    else caps how often a signed-in user can hit it.
+    const supabase = await createServerSupabaseClient();
+    const rateLimit = await checkQueryRateLimit(supabase);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many questions asked — try again shortly." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        }
       );
     }
 
@@ -69,10 +85,10 @@ export async function POST(
     const startIso = pacificDayBoundsUtc(start).startIso;
     const endIso = pacificDayBoundsUtc(end).endIso;
 
-    // 2. Pull raw pings from Supabase/PostGIS for that range. Uses a
-    //    session-bound client, not the service-role key — RLS restricts
-    //    this to the signed-in user's own rows.
-    const supabase = await createServerSupabaseClient();
+    // 2. Pull raw pings from Supabase/PostGIS for that range. Uses the
+    //    same session-bound client from the rate-limit check above, not
+    //    the service-role key — RLS restricts this to the signed-in
+    //    user's own rows.
     const pings = await fetchPingsInRange(supabase, startIso, endIso);
 
     // 3. Cluster into stops + simplify the in-transit polyline.

@@ -1,9 +1,15 @@
 -- Add per-user ownership to location_pings and lock it down with RLS.
 --
--- Existing rows predate multi-tenancy and are left with user_id = NULL;
--- they remain readable only via the service-role key (used server-side
--- in lib/supabase.ts, which bypasses RLS entirely) until backfilled to
--- a real auth.users row once account signup exists.
+-- Existing rows predate multi-tenancy and are left with user_id = NULL,
+-- readable only via a service-role key until backfilled to a real
+-- auth.users row once account signup exists.
+--
+-- Update (2026-08-18): lib/supabase.ts never grew that service-role
+-- client -- account signup (Google OAuth, see README's "Access control"
+-- section) shipped without one. Those null-user_id rows are simply
+-- inaccessible to every client now (`auth.uid() = user_id` never
+-- matches null), not "readable via service-role" as originally planned
+-- here.
 --
 -- Applied directly to the live project (ognpwwurjipokrqwcmpk) via the
 -- Supabase MCP `apply_migration` tool; this file mirrors that change
