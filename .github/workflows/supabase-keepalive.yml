@@ -1,0 +1,32 @@
+name: Supabase Keep-Alive
+
+# Supabase's free tier auto-pauses a project after 7 days with no real
+# database activity -- this repo's Supabase project was found paused
+# (getaddrinfo ENOTFOUND on its own hostname) by the daily synthetic
+# monitor, see #42. synthetic-monitor.yml's `authenticated` job is the
+# only other thing here that makes real authenticated Supabase calls,
+# and it's workflow_dispatch-only by design (bounded cost/blast radius)
+# -- not a reliable clock against a 7-day window on its own. This
+# workflow is a dedicated, independent keep-alive that doesn't depend on
+# anything else in the repo, or any external scheduler, actually running.
+#
+# Twice weekly, matching the same reasoning as scorecard's
+# cache-warm.yml: a 7-day schedule against a 7-day window has zero
+# margin, so a single missed run would let the project pause anyway.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1,4" # Mondays and Thursdays, 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      MONITOR_SUPABASE_URL: ${{ vars.MONITOR_SUPABASE_URL }}
+      MONITOR_SUPABASE_ANON_KEY: ${{ vars.MONITOR_SUPABASE_ANON_KEY }}
+      MONITOR_USER_EMAIL: ${{ vars.MONITOR_USER_EMAIL }}
+      MONITOR_USER_PASSWORD: ${{ secrets.MONITOR_USER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/keep-supabase-active.mjs
