@@ -20,7 +20,7 @@ jobs:
     # Pinned to the same Playwright version/container as ci.yml's
     # smoke-test job — keep these two in sync if either is bumped.
     container:
-      image: mcr.microsoft.com/playwright:v1.62.0-jammy
+      image: mcr.microsoft.com/playwright:v1.63.0-jammy
     env:
       SYNTHETIC_BASE_URL: ${{ vars.SYNTHETIC_BASE_URL }}
     steps:
@@ -32,7 +32,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.0-jammy
+      image: mcr.microsoft.com/playwright:v1.63.0-jammy
     env:
       SYNTHETIC_BASE_URL: ${{ vars.SYNTHETIC_BASE_URL }}
       MONITOR_SUPABASE_URL: ${{ vars.MONITOR_SUPABASE_URL }}

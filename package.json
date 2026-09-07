@@ -14,28 +14,28 @@
     "test:synthetic:auth": "playwright test -c playwright.synthetic.config.ts tests/synthetic/auth-queries.spec.ts tests/synthetic/db-crosscheck.spec.ts tests/synthetic/scenario-matrix.spec.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.122.0",
-    "@supabase/ssr": "^0.12.5",
-    "@supabase/supabase-js": "^2.112.4",
+    "@anthropic-ai/sdk": "^0.124.0",
+    "@supabase/ssr": "^0.12.6",
+    "@supabase/supabase-js": "^2.115.0",
     "@tanstack/react-table": "^9.2.4",
-    "lucide-react": "^1.38.0",
-    "mapbox-gl": "^3.29.0",
-    "next": "^16.3.3",
+    "lucide-react": "^1.42.0",
+    "mapbox-gl": "^3.30.0",
+    "next": "^16.3.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.5",
+    "@types/react-dom": "^19.2.7",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.3",
-    "postcss": "^8.5.26",
+    "eslint-config-next": "^16.3.4",
+    "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

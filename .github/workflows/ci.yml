@@ -39,7 +39,7 @@ jobs:
     # step in this job (`playwright install --with-deps`, an apt install
     # of ~100+ system packages plus the browser download).
     container:
-      image: mcr.microsoft.com/playwright:v1.62.0-jammy
+      image: mcr.microsoft.com/playwright:v1.63.0-jammy
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
