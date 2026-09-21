@@ -28,5 +28,5 @@ jobs:
       MONITOR_USER_EMAIL: ${{ vars.MONITOR_USER_EMAIL }}
       MONITOR_USER_PASSWORD: ${{ secrets.MONITOR_USER_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: node scripts/keep-supabase-active.mjs
