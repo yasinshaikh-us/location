@@ -14,7 +14,7 @@
     "test:synthetic:auth": "playwright test -c playwright.synthetic.config.ts tests/synthetic/auth-queries.spec.ts tests/synthetic/db-crosscheck.spec.ts tests/synthetic/scenario-matrix.spec.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
+    "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-table": "^9.2.4",
