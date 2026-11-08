@@ -15,6 +15,37 @@ function getClient(): Anthropic {
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
+/**
+ * The most recently *fully completed* Saturday-Sunday pair before
+ * todayIso, rolling back a further 7 days if today itself falls on the
+ * candidate Sunday (i.e. today is Saturday or Sunday, so that weekend
+ * is still in progress, not completed).
+ *
+ * Computed here rather than left for the model to work out from the
+ * word "weekend" alone: subtracting 7 days across a month (or year)
+ * boundary is exact arithmetic an LLM can get wrong or answer
+ * inconsistently across calls, so the concrete dates are handed to it
+ * directly instead.
+ */
+function lastFullWeekend(todayIso: string): { saturday: string; sunday: string } {
+  const [y, m, d] = todayIso.split("-").map(Number);
+  const today = new Date(Date.UTC(y, m - 1, d));
+  const dow = today.getUTCDay(); // 0=Sun..6=Sat
+  const diffToSaturday = (dow - 6 + 7) % 7 || 7;
+  const saturday = new Date(today);
+  saturday.setUTCDate(today.getUTCDate() - diffToSaturday);
+  let sunday = new Date(saturday);
+  sunday.setUTCDate(saturday.getUTCDate() + 1);
+
+  const isoDate = (date: Date) => date.toISOString().slice(0, 10);
+  if (isoDate(sunday) === todayIso) {
+    saturday.setUTCDate(saturday.getUTCDate() - 7);
+    sunday = new Date(saturday);
+    sunday.setUTCDate(saturday.getUTCDate() + 1);
+  }
+  return { saturday: isoDate(saturday), sunday: isoDate(sunday) };
+}
+
 export interface ParsedDateRange {
   // False when the question isn't a genuine request about the user's
   // own past location/movement history — the caller should reject the
@@ -42,10 +73,12 @@ export async function parseDateRangeFromQuestion(
   todayIso: string
 ): Promise<ParsedDateRange> {
   const anthropic = getClient();
+  const { saturday: lastWeekendSaturday, sunday: lastWeekendSunday } =
+    lastFullWeekend(todayIso);
 
   const system = `You convert a natural-language question about someone's past location into a concrete date range.
 Today's date is ${todayIso}. Interpret relative phrases ("7 months ago", "last Tuesday", "in March") relative to today.
-"Last weekend" always means the most recently fully completed Saturday-Sunday pair before today, even if today itself is a Saturday or Sunday -- never a weekend that includes today, since that one hasn't finished yet.
+If the question refers to "last weekend", use exactly start=${lastWeekendSaturday} and end=${lastWeekendSunday} -- these are precomputed as the most recently fully completed Saturday-Sunday pair before today (already accounting for today itself possibly being a Saturday or Sunday). Do not recompute these dates yourself.
 
 This tool answers ONLY questions about the user's own past GPS location/movement history (where they were, what route they took, etc.) for a specific date or date range. It is not a general-purpose assistant — it cannot answer trivia, write content, run code, or do anything unrelated to the user's own location history.
 
