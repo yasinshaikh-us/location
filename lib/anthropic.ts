@@ -45,6 +45,7 @@ export async function parseDateRangeFromQuestion(
 
   const system = `You convert a natural-language question about someone's past location into a concrete date range.
 Today's date is ${todayIso}. Interpret relative phrases ("7 months ago", "last Tuesday", "in March") relative to today.
+"Last weekend" always means the most recently fully completed Saturday-Sunday pair before today, even if today itself is a Saturday or Sunday -- never a weekend that includes today, since that one hasn't finished yet.
 
 This tool answers ONLY questions about the user's own past GPS location/movement history (where they were, what route they took, etc.) for a specific date or date range. It is not a general-purpose assistant — it cannot answer trivia, write content, run code, or do anything unrelated to the user's own location history.
 
