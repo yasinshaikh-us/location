@@ -11,10 +11,11 @@ export async function GET(req: NextRequest) {
   const rawNext = req.nextUrl.searchParams.get("next");
   // Only allow same-site relative paths so this can't be used as an open
   // redirect (e.g. `next=https://evil.example` or `next=//evil.example`).
-  const next =
-    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
-      ? rawNext
-      : "/";
+  // The check is on the resolved URL's origin, not the raw string: the
+  // URL parser treats `\` as `/` (so `/\evil.example` becomes
+  // `//evil.example`) and strips tabs/newlines, which a string-prefix
+  // check misses.
+  const next = safeNextPath(rawNext, req.url);
 
   if (code) {
     const supabase = await createServerSupabaseClient();
@@ -25,4 +26,16 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.redirect(new URL("/login?error=auth", req.url));
+}
+
+function safeNextPath(rawNext: string | null, base: string): string {
+  if (!rawNext || !rawNext.startsWith("/")) return "/";
+  const origin = new URL(base).origin;
+  try {
+    const resolved = new URL(rawNext, base);
+    if (resolved.origin !== origin) return "/";
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return "/";
+  }
 }
