@@ -253,8 +253,14 @@ failure surfaces before the slower browser test ever runs.
   is `/api/query` itself: each call triggers two billed Claude calls, so a
   signed-in user (or a leaked session) is capped at 20 requests per
   5-minute window, enforced in Postgres (see
-  `supabase/migrations/20260818000000_add_query_rate_limit.sql`) so it
-  can't be bypassed by calling PostgREST directly.
+  `supabase/migrations/20260818000000_add_query_rate_limit.sql`,
+  `20261124000000_fix_query_rate_limit_param_bypass.sql`) so it can't be
+  bypassed by calling PostgREST directly — an earlier version of the
+  limiting function took its threshold/window as caller-supplied
+  arguments, which meant a signed-in user *could* call it directly with
+  a zero-second window to reset their own count before every real
+  request; the fix hardcodes the threshold so there's nothing left for a
+  caller to override.
 - **Stop-clustering thresholds are fixed** (120m radius, 8min minimum) in
   `lib/simplify.ts` — tune `STOP_RADIUS_METERS` / `MIN_STOP_MINUTES` if
   your commute pattern needs different sensitivity.
